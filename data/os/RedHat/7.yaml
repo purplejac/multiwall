@@ -1,0 +1,2 @@
+---
+multiwall::target_firewall: 'iptables'
