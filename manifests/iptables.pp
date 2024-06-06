@@ -1,24 +1,24 @@
 # @summary
-# Wrapper class around the standard puppet-nftables module.
+# Wrapper class around the standard puppetlabs-firewall module.
 # Exists to allow multiwall to abstract away from the immediate module
 # layer while also providing the option over set module-targeted overrides
-# as a lookup hash, rather than directly to the nftables module.
+# as a lookup hash, rather than directly to the firewall module.
 # Only really includes the firewall module in preparation for use.
 # 
 # @example
-#   include multiwall::nftables
+#   include multiwall::iptables
 #
 # @param target_fw_features [Hash]
-# A hash keyed on the parameters in the nftables module, allowing for overrides
-# of the module parameters, as-required.
+# A hash keyed on the parameters in the firewall module, allowing for overrides
+# of the firewall parameters, as-required.
 #
-class multiwall::nftables (
+class multiwall::iptables (
   Hash  $target_fw_features = {},
 ) {
   if $target_fw_features == {} {
-    include nftables
+    include firewall
   } else {
-    class { 'nftables':
+    class { 'firewall':
       * => $target_fw_features,
     }
   }
