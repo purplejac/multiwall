@@ -24,9 +24,9 @@ class multiwall (
   Hash    $target_fw_features = {},
 ) {
   if $target_fw_features == {} {
-    include $target_firewall
+    include "multiwall::${target_firewall}"
   } else {
-    class { $target_firewall:
+    class { "multiwall::${target_firewall}":
       * => $target_fw_features,
     }
   }
