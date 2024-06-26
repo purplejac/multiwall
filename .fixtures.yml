@@ -3,4 +3,10 @@
 ---
 fixtures:
   forge_modules:
-#     stdlib: "puppetlabs/stdlib"
+    concat: 'puppetlabs/concat'
+    firewall: 'puppetlabs/firewall'
+    nftables: 'puppet/nftables'
+    stdlib: 'puppetlabs/stdlib'
+    systemd:
+      repo: 'puppet/systemd'
+      ref: '6.6.0'

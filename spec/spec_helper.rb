@@ -1,4 +1,6 @@
 # frozen_string_literal: true
+require 'rspec-hiera-puppet'
+
 
 RSpec.configure do |c|
   c.mock_with :rspec
@@ -39,6 +41,7 @@ end
 
 RSpec.configure do |c|
   c.default_facts = default_facts
+  c.hiera_config = 'spec/fixtures/hiera/hiera.yaml'
   c.before :each do
     # set to strictest setting for testing
     # by default Puppet runs at warning level
