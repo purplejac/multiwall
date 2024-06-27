@@ -1,0 +1,19 @@
+# @summary A short summary of the purpose of this class
+#
+# A description of what this class does
+#
+# @example
+#   include testmod
+class multiwall::iptables (
+  Optional[Hash] $target_fw_features = undef,
+) {
+  if $target_fw_features {
+    notify{ "Classing - ${facts['os']['family']}": }
+    class { 'firewall': 
+      * =>  $target_fw_features,
+    }
+  } else {
+    notify{ "Including - ${facts['os']['family']}": }
+    include firewall
+  }
+}

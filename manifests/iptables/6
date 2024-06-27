@@ -1,0 +1,81 @@
+# @summary A short summary of the purpose of this defined type.
+#
+# A description of what this defined type does
+#
+# @example
+#   multiwall::iptables::rule { 'namevar': }
+#
+# @param rule_parameters [Hash]
+#   The set of parameters being used to define the 'firewall' resource,
+#   as outlined in the documentation for puppetlabs-firewall
+#
+define multiwall::iptables::rule (
+Pattern[/(^\d+(?:[ \t-]\S+)+$)/]                                                                                                                                                                 $name                  = $title,
+String[1]                                                                                                                                                                                        $chain                 = INPUT
+Optional[Integer[1]]                                                                                                                                                                             $burst                 = undef
+Optional[String[1]]                                                                                                                                                                              $bytecode              = undef
+Optional[String[1]]                                                                                                                                                                              $cgroup                = undef
+Optional[Boolean]                                                                                                                                                                                $checksum_fill         = undef
+Optional[Boolean]                                                                                                                                                                                $clamp_mss_to_pmtu     = undef
+Optional[Pattern[/^([0-9a-fA-F]{2}[:]){5}([0-9a-fA-F]{2})$/]]                                                                                                                                    $clusterip_clustermac  = undef
+Optional[String[1]]                                                                                                                                                                              $clusterip_hash_init   = undef
+Optional[Enum['sourceip', 'sourceip-sourceport', 'sourceip-sourceport-destport']]                                                                                                                $clusterip_hashmode    = undef
+Optional[Integer[1]]                                                                                                                                                                             $clusterip_local_node  = undef
+Optional[Boolean]                                                                                                                                                                                $clusterip_new         = undef
+Optional[Integer[1]]                                                                                                                                                                             $clusterip_total_nodes = undef
+Optional[String[1]]                                                                                                                                                                              $condition                   = undef
+Optional[Integer]                                                                                                                                                                                $connlimit_above             = undef
+Optional[Integer[0,128]]                                                                                                                                                                         $connlimit_mask              = undef
+Optional[Integer]                                                                                                                                                                                $connlimit_upto              = undef
+Optional[Pattern[/^(?:!\s)?[a-fA-F0-9x]+$/]]                                                                                                                                                     $connmark                    = undef
+Optional[Enum['REPLY', 'ORIGINAL']]                                                                                                                                                              $ctdir                       = undef
+Optional[Pattern[/^(?:!\s)?\d+(?:\:\d+)?$/]]                                                                                                                                                     $ctexpire                    = undef
+Optional[String[1]]                                                                                                                                                                              $ctorigdst                   = undef
+Optional[Pattern[/^(?:!\s)?\d+(?:\:\d+)?$/]]                                                                                                                                                     $ctorigdstport               = undef
+Optional[String[1]]                                                                                                                                                                              $ctorigsrc                   = undef
+Optional[Pattern[/^(?:!\s)?\d+(?:\:\d+)?$/]]                                                                                                                                                     $ctorigsrcport               = undef
+Optional[Variant[Pattern[/^(?:!\s)?\d+$/],Integer]]                                                                                                                                              $ctproto                     = undef
+Optional[String[1]]                                                                                                                                                                              $ctrepldst                   = undef
+Optional[Pattern[/^(?:!\s)?\d+(?:\:\d+)?$/]]                                                                                                                                                     $ctrepldstport               = undef
+Optional[String[1]]                                                                                                                                                                              $ctreplsrc                   = undef
+Optional[Pattern[/^(?:!\s)?\d+(?:\:\d+)?$/]]                                                                                                                                                     $ctreplsrcport               = undef
+Optional[Variant[Pattern[/^(?:!\s)?(?:INVALID|ESTABLISHED|NEW|RELATED|UNTRACKED|SNAT|DNAT)$/],
+  Array[Pattern[/^(?:!\s)?(?:INVALID|ESTABLISHED|NEW|RELATED|UNTRACKED|SNAT|DNAT)$/]]]]                                                                                                          $ctstate                     = undef
+Optional[Variant[Pattern[/^(?:!\s)?(?:EXPECTED|SEEN_REPLY|ASSURED|CONFIRMED|NONE)$/],
+  Array[Pattern[/^(?:!\s)?(?:EXPECTED|SEEN_REPLY|ASSURED|CONFIRMED|NONE)$/]]]]                                                                                                                   $ctstatus                    = undef
+Optional[Pattern[/^[0-9]{4}\-(?:0[0-9]|1[0-2])\-(?:[0-2][0-9]|3[0-1])T(?:[0-1][0-9]|2[0-3])\:[0-5][0-9]\:[0-5][0-9]$/]]                                                                          $date_start                  = undef
+Optional[Pattern[/^[0-9]{4}\-(?:0[0-9]|1[0-2])\-(?:[0-2][0-9]|3[0-1])T(?:[0-1][0-9]|2[0-3])\:[0-5][0-9]\:[0-5][0-9]$/]]                                                                          $date_stop                   = undef
+Optional[String[1]]                                                                                                                                                                              $destination                 = undef
+Optional[Variant[Array[Variant[Pattern[/^(?:!\s)?\d+(?:(?:\:|-)\\d+)?$/],Integer]],Pattern[/^(?:!\s)?(?:[0-1][0-9]{0,2}|2[0-4][0-9]|25[0-5])$/]]                                                 $src_cc                      = undef
+Optional[String[1]]                                                                                                                                                                              $src_range                   = undef
+Optional[Variant[ Array[Pattern[/^(?:!\s)?(?:UNSPEC|UNICAST|LOCAL|BROADCAST|ANYCAST|MULTICAST|BLACKHOLE|UNREACHABLE|UNREACHABLE|PROHIBIT|THROW|NAT|XRESOLVE)(?:\s--limit-iface-(?:in|out))?$/]],
+                        Pattern[/^(?:!\s)?(?:UNSPEC|UNICAST|LOCAL|BROADCAST|ANYCAST|MULTICAST|BLACKHOLE|UNREACHABLE|UNREACHABLE|PROHIBIT|THROW|NAT|XRESOLVE)(?:\s--limit-iface-(?:in|out))?$/]]] $src_type                    = undef
+Optional[Integer[1]]                                                                                                                                                                             $stat_every                  = undef
+Optional[Enum[nth, random]]                                                                                                                                                                      $stat_mode                   = undef
+Optional[Integer]                                                                                                                                                                                $stat_packet                 = undef
+Optional[Variant[Integer[0,1], Float[0.0,1.0]]]                                                                                                                                                  $stat_probability            = undef
+Optional[Variant[Pattern[/^(?:!\s)?(?:INVALID|ESTABLISHED|NEW|RELATED|UNTRACKED)$/], Array[Pattern[/^(?:!\s)?(?:INVALID|ESTABLISHED|NEW|RELATED|UNTRACKED)$/]]]]                                 $state                     = undef
+Optional[String[1]]                                                                                                                                                                              $string                      = undef
+Optional[Enum['bm', 'kmp']]                                                                                                                                                                      $string_algo                 = undef
+Optional[Integer[1]]                                                                                                                                                                             $string_from                 = undef
+Optional[Pattern[/^(?:!\s)?\|[a-zA-Z0-9\s]+\|$/]]                                                                                                                                                $string_hex                  = undef
+Optional[Integer[1]]                                                                                                                                                                             $string_to                   = undef
+Enum['nat', 'mangle', 'filter', 'raw', 'rawpost', 'broute', 'security']                                                                                                                          $table                       = filter
+Optional[Pattern[/^(?:!\s)?((FIN|SYN|RST|PSH|ACK|URG|ALL|NONE),?)+\s((FIN|SYN|RST|PSH|ACK|URG|ALL|NONE),?)+$/]]                                                                                  $tcp_flags                  = undef
+Optional[Variant[Pattern[/^(?:!\s)?(?:[0-1][0-9]{0,2}|2[0-4][0-9]|25[0-5])$/], Integer[0,255]]]                                                                                                  $tcp_option                  = undef
+Optional[Boolean]                                                                                                                                                                                $time_contiguous             = undef
+Optional[Pattern[/^([0-9]|[0-1][0-9]|2[0-3])\:[0-5][0-9](?:\:[0-5][0-9])?/]]                                                                                                                     $time_start                  = undef
+Optional[Pattern[/^([0-9]|[0-1][0-9]|2[0-3])\:[0-5][0-9](?:\:[0-5][0-9])?/]]                                                                                                                     $time_stop                   = undef
+Optional[String[1]]                                                                                                                                                                              $to                          = undef
+Optional[String[1]]                                                                                                                                                                              $todest                      = undef
+Optional[Pattern[/^\d+(?:-\d+)?$/]]                                                                                                                                                              $toports                     = undef
+Optional[String[1]]                                                                                                                                                                              $tosource                    = undef
+Optional[Pattern[/^0x[0-9a-fA-F]+&0x[0-9a-fA-F]+=0x[0-9a-fA-F]+(?::0x[0-9a-fA-F]+)?(?:&&0x[0-9a-fA-F]+&0x[0-9a-fA-F]+=0x[0-9a-fA-F]+(?::0x[0-9a-fA-F]+)?)*$/]]                                   $u32                        = undef
+Optional[Variant[String[1], Integer]]                                                                                                                                                            $uid                         = undef
+Optional[Variant[Enum['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], Array[Enum['Mon','Tue','Wed','Thu','Fri','Sat','Sun']]]]                                                                       $week_days                = undef
+Optional[Integer]                                                                                                                                                                                $zone                        = undef
+) {
+  firewall { $name:
+    * => $rule_parameters,
+  }
+}

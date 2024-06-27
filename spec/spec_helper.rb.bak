@@ -1,4 +1,6 @@
 # frozen_string_literal: true
+require 'rspec-hiera-puppet'
+
 
 RSpec.configure do |c|
   c.mock_with :rspec

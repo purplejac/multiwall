@@ -1,2 +1,4 @@
 ---
-multiwall::target_firewall: 'nftables'
+multiwall::nftables::target_fw_features:
+  echo: '/usr/bin/echo'
+  nft_path: '/usr/sbin/nft'

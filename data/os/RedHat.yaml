@@ -1,3 +1,0 @@
----
-multiwall::target_firewall: 'nftables'
-nftables::firewalld_enable: false

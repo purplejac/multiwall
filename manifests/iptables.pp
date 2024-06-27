@@ -13,13 +13,13 @@
 # of the firewall parameters, as-required.
 #
 class multiwall::iptables (
-  Hash  $target_fw_features = {},
+  Optional[Hash]  $target_fw_features = undef,
 ) {
-  if $target_fw_features == {} {
-    include firewall
-  } else {
+  if $target_fw_features {
     class { 'firewall':
       * => $target_fw_features,
     }
+  } else {
+    include firewall
   }
 }

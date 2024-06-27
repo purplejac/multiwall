@@ -5,7 +5,11 @@ require 'spec_helper'
 describe 'multiwall::chain' do
   let(:title) { 'namevar' }
   let(:params) do
-    {}
+    {
+      'name'   => 'INPUT:filter:IPv4',
+      'ensure' => 'present',
+      'policy' => 'drop',
+    }
   end
 
   on_supported_os.each do |os, os_facts|

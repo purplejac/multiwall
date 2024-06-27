@@ -1,0 +1,4 @@
+---
+multiwall::iptables::target_fw_features:
+  ensure: running
+nftables::firewalld_enable: false

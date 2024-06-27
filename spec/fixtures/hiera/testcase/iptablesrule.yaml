@@ -1,0 +1,6 @@
+---
+iptables::rule::name: '002 reject local traffic not on loopback interface'
+iptables::rule::iniface: '! lo'
+iptables::rule::proto: 'all'
+iptables::rule::destination: '127.0.0.1/8'
+iptables::rule::jump: 'reject'

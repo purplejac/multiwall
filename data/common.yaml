@@ -1,1 +1,2 @@
 --- {}
+multiwall::target_firewall: 'nftables'

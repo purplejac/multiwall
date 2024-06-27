@@ -27,7 +27,7 @@ class multiwall (
     include "multiwall::${target_firewall}"
   } else {
     class { "multiwall::${target_firewall}":
-      * => $target_fw_features,
+      target_fw_features => $target_fw_features,
     }
   }
 }
