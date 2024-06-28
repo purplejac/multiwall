@@ -3,10 +3,15 @@
 require 'spec_helper'
 
 describe 'multiwall::chain' do
+  let(:pre_condition) { 'include nftables' }
   let(:title) { 'namevar' }
+
+  #
+  # Defining a chain to test chain creation
+  #
   let(:params) do
     {
-      'name'   => 'INPUT:filter:IPv4',
+      'name'   => 'TESTCHAIN:filter:IPv4',
       'ensure' => 'present',
       'policy' => 'drop',
     }

@@ -3,6 +3,7 @@
 require 'spec_helper'
 
 describe 'multiwall::nftables::chain' do
+  let(:pre_condition) { 'include nftables' }
   let(:title) { 'namevar' }
   let(:params) do
     {}

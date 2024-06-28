@@ -14,6 +14,7 @@ describe 'multiwall::iptables::chain' do
 
   on_supported_os.each do |os, os_facts|
     context "on #{os}" do
+      it { pp os_facts[:os] }
       let(:facts) { os_facts }
 
       it { is_expected.to compile }
