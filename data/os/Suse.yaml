@@ -8,3 +8,5 @@ multiwall::nftables::target_fw_features:
 #
 nftables::echo: '/usr/bin/echo'
 nftables::nft_path: '/usr/sbin/nft'
+
+multiwall::target_firewall: 'iptables'

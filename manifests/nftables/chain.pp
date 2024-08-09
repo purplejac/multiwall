@@ -1,3 +1,4 @@
+#lint:ignore:140chars
 # @summary Generic firewall chain resource to abstract the chain creation based on the parameters used for puppetlabs/firewall
 #
 # @param ensure
@@ -15,6 +16,10 @@
 # Whether or not to purge unmanaged rules in this chain
 # Not currently enforced for nftables...
 #
+# @param use_inet
+# Data type: Boolean
+# Deciding whether to use the shared inet table in nftables, over specifying the protocol-version (IPv4/IPv6)
+# 
 # @param ignore
 # Data type: Optional[Variant[String[1], Array[String[1]]]]
 # Regex to perform on firewall rules to exempt unmanaged rules from purging.
@@ -39,7 +44,7 @@ define multiwall::nftables::chain (
   Optional[Variant[String[1], Array[String[1]]]]      $ignore         = undef,
   Optional[Enum['accept', 'drop', 'queue', 'return']] $policy         = undef,
 ) {
-  $chain_config = $name.split(/:/)  
+  $chain_config = $name.split(/:/)
 
   #
   # nftables defaults to a joint table for ipv4 and ipv6, therefore this type will do the same,
@@ -70,7 +75,8 @@ define multiwall::nftables::chain (
   # Realise the resource with the provided settings
   #
   nftables::chain { $name:
-    table  => $table,
+    table => $table,
     chain => $chain_config[0],
   }
 }
+#lint:endignore

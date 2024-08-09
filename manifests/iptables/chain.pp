@@ -1,3 +1,4 @@
+#lint:ignore:140chars
 # @summary firewall chain resource to implement the firewallchain resource from puppetlabs/firewall
 #
 # @param ensure
@@ -27,11 +28,11 @@
 # @example
 #   multiwall::iptables::chain { 'namevar': }
 define multiwall::iptables::chain (
-    Enum[present, absent, 'present', 'absent']          $ensure,
-    Boolean                                             $ignore_foreign = false,
-    Boolean                                             $purge          = false,
-    Optional[Variant[String[1], Array[String[1]]]]      $ignore         = undef,
-    Optional[Enum['accept', 'drop', 'queue', 'return']] $policy         = undef,
+  Enum[present, absent, 'present', 'absent']          $ensure,
+  Boolean                                             $ignore_foreign = false,
+  Boolean                                             $purge          = false,
+  Optional[Variant[String[1], Array[String[1]]]]      $ignore         = undef,
+  Optional[Enum['accept', 'drop', 'queue', 'return']] $policy         = undef,
 ) {
   #
   # Simply directly declare the firewallchain transferring the arguments directly to firewallchain
@@ -44,3 +45,4 @@ define multiwall::iptables::chain (
     policy         => $policy,
   }
 }
+#lint:endignore

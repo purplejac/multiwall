@@ -15,7 +15,7 @@ hierarchy:
       - "os/%{facts.os.family}/%{facts.kernelrelease}.yaml"
   - name: "osname"
     paths:
-      - "os/${facts.os.family}/${facts.os.name}.yaml"
+      - "os/%{facts.os.family}/%{facts.os.name}-%{facts.os.release.major}.yaml"
   - name: "osfamily"
     paths:
       - "os/%{facts.os.name}.yaml"
