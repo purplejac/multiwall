@@ -10,3 +10,7 @@ fixtures:
     systemd:
       repo: 'puppet/systemd'
       ref: '6.6.0'
+  repositories:
+    facts: 'https://github.com/puppetlabs/puppetlabs-facts.git'
+    provision: 'https://github.com/puppetlabs/provision.git'
+    puppet_agent: 'https://github.com/puppetlabs/puppetlabs-puppet_agent.git'

@@ -19,7 +19,7 @@ define multiwall::nftables::rule (
 ) {
   if $name =~ /^(\d+)/ {
     $num_string = String($1)
-    $number = Integer($num_string)
+    $number = scanf($num_string.regsubst(/^0/,''), "%i")[0]
 
     if $number < $mid_val {
       $shift_num = $number + 1
@@ -40,16 +40,14 @@ define multiwall::nftables::rule (
   } else {
     $order_param = '50'
   }
-
+  notice($order_val)
   if 'chain' in $params {
     $chain = $params['chain'].regsubst(/-/, '_', 'G')
   } else {
     $chain = 'INPUT'
   }
 
-  #$sanitised_name = $name.regsubst(/(^[^a-zA-Z0-9_]+|[^a-zA-Z0-9_]+$)/, '','G').regsubst(/[^a-zA-Z0-9_]+/, '_', 'G')
-  $sanitised_name = ([$chain] + (($name.split(/[ |-]/) - $num_string)).join('_')).join('-')
-
+  $sanitised_name = ([$chain] + [(($name.split(/[ |-]/) - $num_string)).join('_')]).join('-').regsubst(/[\.|\/]/,'_', 'G')
 
   if $params['ensure'] == 'absent' {
     $filtered_params = { ensure => $params['ensure'] }
