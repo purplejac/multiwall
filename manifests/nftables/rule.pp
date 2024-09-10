@@ -210,7 +210,13 @@ define multiwall::nftables::rule (
       $connlimit_above = ''
     }
 
-    $content = "${saddr} ${daddr} ${params['proto']} ${sport} ${dport} ${log_prefix} ${clamp_mss} ${cluster_conf} ${connlimit_above} ${action} ${cgroup}"
+    if $params['connlimit_upto'] {
+      $connlimit_upto = "ct count under ${params['connlimit_above']}"
+    } else {
+      $connlimit_upto = ''
+    }
+
+    $content = "${saddr} ${daddr} ${params['proto']} ${sport} ${dport} ${log_prefix} ${clamp_mss} ${cluster_conf} ${connlimit_upto} ${connlimit_above} ${action} ${cgroup}"
 
     $filtered_params = {
       'ensure'  => $params['ensure'],
