@@ -34,8 +34,8 @@ describe 'multiwall::nftables::rule' do
           is_expected.to contain_multiwall__nftables__rule(params['name']).with( 'params' => params['params'] )
           is_expected.to contain_nftables__rule('INPUT-reject_local_traffic_not_on_loopback_interface').with(
             'ensure' => params['params']['ensure'],       
-            'table' => 'inet',
-            'content' => %r{ip saddr 127.0.0.1/8 all *reject},
+            'table' => 'inet-filter',
+            'content' => %r{ip daddr 127.0.0.1/8 all *reject},
           )
         end
       }
