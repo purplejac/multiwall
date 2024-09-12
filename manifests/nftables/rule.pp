@@ -55,7 +55,7 @@ define multiwall::nftables::rule (
   } else {
     if $name =~ /^(\d+)/ {
       $num_string = String($1)
-      $number = scanf($num_string.regsubst(/^0/,''), '%i')[0]
+      $number = Integer(scanf($num_string.regsubst(/^0*/,''), '%i')[0])
 
       if $number < $mid_val {
         $shift_num = $number + 1
@@ -66,7 +66,7 @@ define multiwall::nftables::rule (
             $order_val = $shift_num
           }
         } else {
-          $order_val = String($mid_val - ($low_offset - ceil($number / $low_offset)))
+          $order_val = String($mid_val - ($low_offset - ceiling($number / $low_offset)))
         }
       } else {
         $order_val = String($mid_val + (($number / $high_offset) - 1 ))
@@ -197,25 +197,25 @@ define multiwall::nftables::rule (
       } elsif $params['source'] {
         $saddr = "ip saddr ${params['source']}"
       } else {
-        $saddr = undef
+        $saddr = ''
       }
 
       if $params['destination'] {
         $daddr = "ip daddr ${params['destination']}"
       } else {
-        $daddr = undef
+        $daddr = ''
       }
 
       if $params['dport'] {
         $dport = "dport ${params['dport']}"
       } else {
-        $dport = undef
+        $dport = ''
       }
 
       if $params['sport'] {
         $sport = "sport ${params['sport']}"
       } else {
-        $sport = undef
+        $sport = ''
       }
 
       #
@@ -252,7 +252,7 @@ define multiwall::nftables::rule (
             default               => "ip daddr 127.0.0.1",
           }
 
-          $ctdir = "ip ${addr_command} ct state established,related"
+          $ctdir = "${addr_command} ct state established,related"
         } else {
           $ctdir = ''
         }
@@ -272,8 +272,35 @@ define multiwall::nftables::rule (
         $connlimit_upto = ''
       }
 
-      #      $content = "${saddr} ${daddr} ${ctdir} ${params['proto']} ${sport} ${dport} ${log_prefix} ${clamp_mss} ${cluster_conf} ${connlimit_upto} ${connlimit_above} ${action} ${cgroup}"
-      $content = [$saddr, $daddr, $ctdir, $params['proto'], $sport, $dport, $log_prefix, $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above, $action, $cgroup].delete('').join(' ')
+      if $params['ctorigdst'] {
+        $ctorigdst = "ct original daddr ${params['ctorigdst']}"
+      } else {
+        $ctorigdst = ''
+      }
+
+      if $params['ctorigdstport'] {
+        $ctorigdstport = "ct original ${proto} dport ${params['ctorigdstport']}"
+      } else {
+        $ctorigdstport = ''
+      }
+
+      if $params['ctorigsrc'] {
+        $ctorigsrc = "ct original saddr ${params['ctorigsrc']}"
+      } else {
+        $ctorigsrc = ''
+      }
+
+      if $params['ctorigsrcport'] {
+        $ctorigsrcport = "ct original ${proto} sport ${params['ctorigsrcport']}"
+      } else {
+        $ctorigsrcport = ''
+      }
+
+      $content = [
+        $saddr, $daddr, $ctdir, $params['proto'], $sport, $dport, $log_prefix,
+        $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above, $ctorigdst,
+        $ctorigdstport, $ctorigsrc, $ctorigsrcport, $action, $cgroup
+      ].delete('').join(' ')
 
       $filtered_params = {
         'ensure'  => $params['ensure'],

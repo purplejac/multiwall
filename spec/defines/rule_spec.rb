@@ -146,6 +146,125 @@ describe 'multiwall::rule' do
           end
         }
       end
+
+      context 'testing ctdir with reply.' do 
+        let(:params) do
+          {
+            'name' => '005 ctdir set to reply',
+            'ctdir' => 'REPLY',
+            'chain' => 'OUTPUT',
+            'jump' => 'accept',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it { is_expected.to compile }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('OUTPUT-ctdir_set_to_reply').with(
+              'ensure' => 'present',
+              'table' => 'inet-filter',
+              'content' => %r{ip daddr 172.16.254.254 ct state established,related *accept},
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'ctdir' => params['ctdir'],
+              'jump' => params['jump'],
+            )
+          end
+        }
+      end
+
+      context 'testing ctorigdst parameter.' do
+        let(:params) do
+          {
+            'name' => '007 ctorigdst to 127.0.0.1 and masq',
+            'chain' => 'POSTROUTING',
+            'table' => 'nat',
+            'source' => facts[:networking]['ip'],
+            'ctorigdst' => '10.10.10.10',
+            'jump' => 'masquerade',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it { is_expected.to compile }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('POSTROUTING-ctorigdst_to_127_0_0_1_and_masq').with(
+              'ensure' => 'present',
+              'table' => "inet-#{params['table']}",
+              'content' => %r{ip saddr #{facts[:networking]['ip']} *ct original daddr 10.10.10.10 masquerade},
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'table' => params['table'],
+              'ctorigdst' => params['ctorigdst'],
+              'jump' => params['jump'],
+            )
+          end
+        }
+      end
+
+      context 'testing ctorigsrc parameter.' do
+        let(:params) do
+          {
+            'name' => '008 ctorigdst to 127.0.0.1 and masq',
+            'chain' => 'POSTROUTING',
+            'table' => 'nat',
+            'destination' => facts[:networking]['ip'],
+            'ctorigsrc' => '10.10.10.10',
+            'jump' => 'masquerade',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it { is_expected.to compile }
+      end
+
+#          {
+#            'name' => '008 why is it being weird',
+#            'chain' => 'POSTROUTING',
+#            'table' => 'nat',
+#            'source' => facts[:networking]['ip'],
+#            'ctorigsrc' => '10.10.10.10',
+#            'jump' => 'masquerade',
+#          }
+#        end
+#        let(:title) { params['name'] }
+#
+#        it { is_expected.to compile }
+#
+#        it {
+#          if os_check
+#            is_expected.to contain_multiwall__nftables__rule(params['name'])
+#            is_expected.to contain_nftables__rule('POSTROUTING-ctorigsrc_from_127_0_0_1_and_masq').with(
+#              'ensure' => 'present',
+#              'table' => "inet-#{params['table']}",
+#              'content' => %r{ip saddr #{facts[:networking]['ip']} *ct original daddr 10.10.10.10 masquerade},
+#            )
+#          else
+#            is_expected.to contain_multiwall__iptables__rule(params['name'])
+#            is_expected.to contain_firewall(params['name']).with(
+#              'ensure' => 'present',
+#              'chain' => params['chain'],
+#              'table' => params['table'],
+#              'ctorigsrc' => params['ctorigsrc'],
+#              'jump' => params['jump'],
+#            )
+#          end
+#        }
+#      end
     end
   end
 end
