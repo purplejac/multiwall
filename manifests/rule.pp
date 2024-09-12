@@ -989,9 +989,9 @@ define multiwall::rule (
   Optional[String[1]]                                                                                                                                                                             $chain = undef,
   Enum['nat', 'mangle', 'filter', 'raw', 'rawpost', 'broute', 'security']                                                                                                                         $table = 'filter',
   Enum['iptables', 'nftables']                                                                                                                                                                    $target_firewall = lookup('multiwall::target_firewall', { default_value => 'nftables' }),
-  Enum['iptables', 'ip6tables', 'IPv4', 'IPv6', 'inet']                                                                                                                                           $protocol = $target_firewall ? { 'nftables' => 'inet', 'iptables' => 'IPv4' , default => 'inet' }, 
+  Enum['iptables', 'ip6tables', 'IPv4', 'IPv6', 'inet']                                                                                                                                           $protocol = $target_firewall ? { 'nftables' => 'inet', 'iptables' => 'IPv4' , default => 'inet' },
   Optional[Enum['accept','reject','drop']]                                                                                                                                                        $action = undef,
-  Optional[String]                                                                                                                                                                                $jump   = if $action {  $action.upcase() } else { $action },
+  Optional[String]                                                                                                                                                                                $jump   = if $action { $action.upcase() } else { $action },
   Optional[Integer[1]]                                                                                                                                                                            $burst = undef,
   Optional[String[1]]                                                                                                                                                                             $bytecode = undef,
   Optional[String[1]]                                                                                                                                                                             $cgroup = undef,
@@ -1303,5 +1303,5 @@ define multiwall::rule (
   #
   # Enact resource by versioned type
   #
-  create_resources("multiwall::${target_firewall}::rule", {$title => { 'name' => $name, 'params' => $firewall_params }} )
+  create_resources("multiwall::${target_firewall}::rule", { $title => { 'name' => $name, 'params' => $firewall_params } })
 }

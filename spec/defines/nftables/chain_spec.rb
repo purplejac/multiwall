@@ -19,10 +19,12 @@ describe 'multiwall::nftables::chain' do
 
       it { is_expected.to compile }
 
-      it { is_expected.to contain_nftables__chain(params['name']).with(
-        'table' => 'inet-filter',
-        'chain' => 'TESTCHAIN',
-      ) }
+      it {
+        is_expected.to contain_nftables__chain(params['name']).with(
+          'table' => 'inet-filter',
+          'chain' => 'TESTCHAIN',
+        )
+      }
     end
   end
 end

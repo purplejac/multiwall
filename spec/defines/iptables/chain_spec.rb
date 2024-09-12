@@ -19,10 +19,12 @@ describe 'multiwall::iptables::chain' do
 
       it { is_expected.to compile }
 
-      it { is_expected.to contain_firewallchain(params['name']).with(
-        'ensure' => params['ensure'],
-        'policy' => params['policy'],
-      ) }
+      it {
+        is_expected.to contain_firewallchain(params['name']).with(
+          'ensure' => params['ensure'],
+          'policy' => params['policy'],
+        )
+      }
     end
   end
 end

@@ -93,7 +93,7 @@ describe 'Multiwall setup' do
         }
     PUPPETCODE
 
-    it do 
+    it do
       idempotent_apply(pp)
     end
   end

@@ -20,15 +20,23 @@ describe 'multiwall::chain' do
     context "on #{os}" do
       let(:facts) { os_facts }
 
+      let(:os_check) {
+        if ((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
+           ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
+           ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.04') ||
+           ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
+           (facts[:os]['name'] == 'Fedora')
+
+           true
+        else
+          false
+        end
+      }
+
       it { is_expected.to compile }
 
       it {
-        if (((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
-          ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
-          ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.04') ||
-          ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
-          (facts[:os]['name'] == 'Fedora'))
-        then
+        if os_check
           is_expected.to contain_multiwall__nftables__chain(params['name']).with(
             'ensure' => 'present',
             'ignore_foreign' => false,
@@ -47,7 +55,7 @@ describe 'multiwall::chain' do
             'ignore_foreign' => false,
             'purge' => false,
             'policy' => 'drop',
-          ) 
+          )
           is_expected.to contain_firewallchain(params['name']).with(
             'ensure' => 'present',
             'ignore_foreign' => false,

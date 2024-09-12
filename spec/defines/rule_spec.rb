@@ -6,6 +6,19 @@ describe 'multiwall::rule' do
   on_supported_os.each do |os, os_facts|
     context "on #{os}" do
       let(:facts) { os_facts }
+      let(:os_check) {
+        if ((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
+           ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
+           ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
+           ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
+           (facts[:os]['name'] == 'Fedora')
+
+           true
+        else
+          false
+        end
+      }
+
       context 'testing basic rule' do
         let(:params) do
           {
@@ -23,19 +36,14 @@ describe 'multiwall::rule' do
         it { is_expected.to compile }
         it {
           is_expected.to contain_multiwall__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
-
-          if (((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
-            ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
-            ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
-            ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
-            (facts[:os]['name'] == 'Fedora'))
-          then
+        
+          if os_check
             is_expected.to contain_multiwall__nftables__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
             is_expected.to contain_nftables__rule('INPUT-reject_local_traffic_not_on_loopback_interface').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
               'order' => '03',
-              'content' => %r{ip daddr 127.0.0.1/8 all *reject}
+              'content' => %r{ip daddr 127.0.0.1/8 all *reject},
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
@@ -49,7 +57,7 @@ describe 'multiwall::rule' do
               'proto' => 'all',
             )
           end
-          }
+        }
       end
 
       context 'testing absent setting' do
@@ -63,12 +71,7 @@ describe 'multiwall::rule' do
 
         it { is_expected.to compile }
         it {
-          if (((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
-            ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
-            ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
-            ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
-            (facts[:os]['name'] == 'Fedora'))
-          then
+          if os_check
             is_expected.to contain_multiwall__nftables__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
             is_expected.to contain_nftables__rule('INPUT-reject_local_traffic_not_on_loopback_interface').with_ensure('absent')
           else
@@ -94,12 +97,7 @@ describe 'multiwall::rule' do
         it { is_expected.to compile }
 
         it {
-          if (((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
-            ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
-            ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
-            ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
-            (facts[:os]['name'] == 'Fedora'))
-          then
+          if os_check
             is_expected.to contain_multiwall__nftables__rule(params['name']).with_name(params['name'])
             is_expected.to contain_nftables__rule('INPUT-connlimit_rule').with(
               'ensure' => 'present',
@@ -118,6 +116,33 @@ describe 'multiwall::rule' do
               'connlimit_mask' => 24,
               'jump' => 'reject',
             )
+          end
+        }
+      end
+
+      context 'testing settings unsupported in nftables but support in iptables.' do
+        let(:params) do
+          {
+            'name' => '004 checksum_fill for testing',
+            'chain' => 'OUTPUT',
+            'checksum_fill' => true,
+            'iniface' => 'eth0',
+            'proto' => 'all',
+            'destination' => '127.0.0.1/8',
+            'jump' => 'accept',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it { is_expected.to compile }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_notify('checksum_fill is not supported with nftables!')
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name'])
           end
         }
       end
