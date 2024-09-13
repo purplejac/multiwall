@@ -43,7 +43,7 @@ describe 'multiwall::rule' do
               'ensure' => 'present',
               'table' => 'inet-filter',
               'order' => '03',
-              'content' => %r{ip daddr 127.0.0.1/8 all *reject},
+              'content' => %r{ip daddr 127.0.0.1/8 ip protocol \{ icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp \}  reject},
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
@@ -216,10 +216,46 @@ describe 'multiwall::rule' do
         }
       end
 
+      context 'testing ctorigdstport parameter.' do
+        let(:params) do
+          {
+            'name' => '008 ctorigdstport to 8888 and masq',
+            'chain' => 'POSTROUTING',
+            'table' => 'nat',
+            'proto' => 'tcp',
+            'ctorigdstport' => '8888',
+            'jump' => 'masquerade',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it { is_expected.to compile }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('POSTROUTING-ctorigdstport_to_8888_and_masq').with(
+              'ensure' => 'present',
+              'table' => "inet-#{params['table']}",
+              'content' => %r{ip protocol tcp *ct original proto-dst 8888 masquerade},
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'table' => params['table'],
+              'ctorigdst' => params['ctorigdst'],
+              'jump' => params['jump'],
+            )
+          end
+        }
+      end
+
       context 'testing ctorigsrc parameter.' do
         let(:params) do
           {
-            'name' => '008 ctorigdst to 127.0.0.1 and masq',
+            'name' => '009 ctorigsrc from 127.0.0.1 and masq',
             'chain' => 'POSTROUTING',
             'table' => 'nat',
             'destination' => facts[:networking]['ip'],
@@ -230,41 +266,64 @@ describe 'multiwall::rule' do
         let(:title) { params['name'] }
 
         it { is_expected.to compile }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('POSTROUTING-ctorigsrc_from_127_0_0_1_and_masq').with(
+              'ensure' => 'present',
+              'table' => "inet-#{params['table']}",
+              'content' => %r{ip daddr #{facts[:networking]['ip']} *ct original saddr 10.10.10.10 masquerade},
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'table' => params['table'],
+              'ctorigsrc' => params['ctorigsrc'],
+              'jump' => params['jump'],
+            )
+          end
+        }
       end
 
-#          {
-#            'name' => '008 why is it being weird',
-#            'chain' => 'POSTROUTING',
-#            'table' => 'nat',
-#            'source' => facts[:networking]['ip'],
-#            'ctorigsrc' => '10.10.10.10',
-#            'jump' => 'masquerade',
-#          }
-#        end
-#        let(:title) { params['name'] }
-#
-#        it { is_expected.to compile }
-#
-#        it {
-#          if os_check
-#            is_expected.to contain_multiwall__nftables__rule(params['name'])
-#            is_expected.to contain_nftables__rule('POSTROUTING-ctorigsrc_from_127_0_0_1_and_masq').with(
-#              'ensure' => 'present',
-#              'table' => "inet-#{params['table']}",
-#              'content' => %r{ip saddr #{facts[:networking]['ip']} *ct original daddr 10.10.10.10 masquerade},
-#            )
-#          else
-#            is_expected.to contain_multiwall__iptables__rule(params['name'])
-#            is_expected.to contain_firewall(params['name']).with(
-#              'ensure' => 'present',
-#              'chain' => params['chain'],
-#              'table' => params['table'],
-#              'ctorigsrc' => params['ctorigsrc'],
-#              'jump' => params['jump'],
-#            )
-#          end
-#        }
-#      end
+      context 'testing ctorigsrcport parameter.' do
+        let(:params) do
+          {
+            'name' => '010 ctorigsrcport for 8888 and masq',
+            'chain' => 'POSTROUTING',
+            'table' => 'nat',
+            'proto' => 'tcp',
+            'ctorigsrcport' => '8888',
+            'jump' => 'masquerade',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it { is_expected.to compile }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('POSTROUTING-ctorigsrcport_for_8888_and_masq').with(
+              'ensure' => 'present',
+              'table' => "inet-#{params['table']}",
+              'content' => %r{ip protocol tcp *ct original proto-src 8888 masquerade},
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'table' => params['table'],
+              'ctorigdst' => params['ctorigdst'],
+              'jump' => params['jump'],
+            )
+          end
+        }
+      end
+
     end
   end
 end

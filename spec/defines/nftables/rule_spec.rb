@@ -43,7 +43,7 @@ describe 'multiwall::nftables::rule' do
           is_expected.to contain_nftables__rule('INPUT-reject_local_traffic_not_on_loopback_interface').with(
             'ensure' => params['params']['ensure'],
             'table' => 'inet-filter',
-            'content' => %r{ip daddr 127.0.0.1/8 all *reject},
+            'content' => %r{ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp }  reject},
           )
         end
       }

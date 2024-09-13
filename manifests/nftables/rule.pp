@@ -72,7 +72,7 @@ define multiwall::nftables::rule (
         $order_val = String($mid_val + (($number / $high_offset) - 1 ))
       }
 
-      $order_param = $order_val
+      $order_param = String($order_val)
     } else {
       $order_param = '50'
     }
@@ -273,31 +273,55 @@ define multiwall::nftables::rule (
       }
 
       if $params['ctorigdst'] {
-        $ctorigdst = "ct original daddr ${params['ctorigdst']}"
+        if $saddr == '' {
+          $ctorigdst = "ip saddr 0.0.0.0 ct original daddr ${params['ctorigdst']}"
+        } else {
+          $ctorigdst = "ct original daddr ${params['ctorigdst']}"
+        }
       } else {
         $ctorigdst = ''
       }
 
       if $params['ctorigdstport'] {
-        $ctorigdstport = "ct original ${proto} dport ${params['ctorigdstport']}"
+        $ctorigdstport = "ct original proto-dst ${params['ctorigdstport']}"
       } else {
         $ctorigdstport = ''
       }
 
       if $params['ctorigsrc'] {
-        $ctorigsrc = "ct original saddr ${params['ctorigsrc']}"
+        if $daddr == '' {
+          $ctorigsrc = "ip daddr 0.0.0.0 ct original saddr ${params['ctorigsrc']}"
+        } else {
+          $ctorigsrc = "ct original saddr ${params['ctorigsrc']}"
+        }
       } else {
         $ctorigsrc = ''
       }
 
       if $params['ctorigsrcport'] {
-        $ctorigsrcport = "ct original ${proto} sport ${params['ctorigsrcport']}"
+        $ctorigsrcport = "ct original proto-src ${params['ctorigsrcport']}"
       } else {
         $ctorigsrcport = ''
       }
 
+      if $params['proto'] {
+        if $params['proto'] == 'all' {
+          $set_proto = '{ icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp }'
+        } else {
+          $set_proto = $params['proto']
+        }
+
+        if (! $params['saddr']) and (! $params['daddr']) {
+          $proto = "ip protocol ${set_proto}"
+        } else {
+          $proto = $params['proto']
+        }
+      } else {
+        $proto = ''
+      }
+
       $content = [
-        $saddr, $daddr, $ctdir, $params['proto'], $sport, $dport, $log_prefix,
+        $saddr, $daddr, $ctdir, $proto, $sport, $dport, $log_prefix,
         $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above, $ctorigdst,
         $ctorigdstport, $ctorigsrc, $ctorigsrcport, $action, $cgroup
       ].delete('').join(' ')
