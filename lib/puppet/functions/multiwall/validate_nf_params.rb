@@ -4,7 +4,7 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
   end
 
   def validate(params)
-    unsupported = ['bytecode', 'checksum_fill', 'condition']
+    unsupported = ['bytecode', 'checksum_fill', 'condition', 'ctexpire']
 
     clusterip_keys = ['clusterip_hash_init', 'clusterip_total_node', 'clusterip_local_node']
     ctorig_port_keys = ['ctorigdstport', 'ctorigsrcport']
@@ -37,7 +37,7 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
         break
       end
 
-      if ctorig_port_keys.include?(parameter) and (not params['proto'])
+      if ctorig_port_keys.include?(parameter) and (not params['proto']) and (not params['ctproto'])
         res = [5, 'ctorig port parameter requires that the corresponding protocol be defined with the "proto" parameter.']
         break
       end

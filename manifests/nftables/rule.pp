@@ -272,14 +272,45 @@ define multiwall::nftables::rule (
         $connlimit_upto = ''
       }
 
-      if $params['ctorigdst'] {
-        if $saddr == '' {
-          $ctorigdst = "ip saddr 0.0.0.0 ct original daddr ${params['ctorigdst']}"
+      #
+      # Merged management of the simpler conntrack flow management to simplify the reading and avoid
+      # code duplication.
+      #
+
+      if $params['ctorigdst'] or $params['ctrepldst'] or $params['ctorigsrc'] or $params['ctoreplsrc'] {
+        if $params['ctorigdst'] or $params['ctorepldst'] {
+          $ip_addr_dir = 'saddr'
+          $ct_addr_dir = 'daddr'
+
+          if $params['ctorigdst'] {
+            $ct_target = $params['ctorigdst']
+          } else {
+            $ct_target = $params['ctrepldst']
+          }
         } else {
-          $ctorigdst = "ct original daddr ${params['ctorigdst']}"
+          $ip_addr_dir = 'daddr'
+          $ct_addr_dir = 'saddr'
+
+          if $params['ctorigsrc'] {
+            $ct_target = $params['ctorigsrc']
+          } else {
+            $ct_target = $params['ctreplsrc']
+          }
+        }
+
+        if $params['ctorigdst'] or $params['ctorigsrc'] {
+          $traffic_type = 'original'
+        } else {
+          $traffic_type = 'reply'
+        }
+
+        if $saddr == '' and $daddr == '' {
+          $ct_dir_ctrl = "ip ${ip_addr_dir} 0.0.0.0 ct ${traffic_type} ip ${ct_addr_dir} ${ct_target}"
+        } else {
+          $ct_dir_ctrl = "ct ${traffic_type} ${ct_addr_dir} ${ct_target}"
         }
       } else {
-        $ctorigdst = ''
+        $ct_dir_ctrl = ''
       }
 
       if $params['ctorigdstport'] {
@@ -288,42 +319,34 @@ define multiwall::nftables::rule (
         $ctorigdstport = ''
       }
 
-      if $params['ctorigsrc'] {
-        if $daddr == '' {
-          $ctorigsrc = "ip daddr 0.0.0.0 ct original saddr ${params['ctorigsrc']}"
-        } else {
-          $ctorigsrc = "ct original saddr ${params['ctorigsrc']}"
-        }
-      } else {
-        $ctorigsrc = ''
-      }
-
       if $params['ctorigsrcport'] {
         $ctorigsrcport = "ct original proto-src ${params['ctorigsrcport']}"
       } else {
         $ctorigsrcport = ''
       }
 
-      if $params['proto'] {
+      if $params['ctproto'] and ($params['ctorigdstport'] or $params['ctorigsrcport']) {
+          $set_proto = $params['ctproto']
+      } elsif $params['proto'] {
         if $params['proto'] == 'all' {
           $set_proto = '{ icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp }'
         } else {
           $set_proto = $params['proto']
         }
-
-        if (! $params['saddr']) and (! $params['daddr']) {
-          $proto = "ip protocol ${set_proto}"
-        } else {
-          $proto = $params['proto']
-        }
       } else {
-        $proto = ''
+        $set_proto = ''
+      }
+
+      if $set_proto  != '' and (! $params['saddr']) and (! $params['daddr']) {
+        $proto = "ip protocol ${set_proto}"
+      } else {
+        $proto = $set_proto
       }
 
       $content = [
         $saddr, $daddr, $ctdir, $proto, $sport, $dport, $log_prefix,
-        $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above, $ctorigdst,
-        $ctorigdstport, $ctorigsrc, $ctorigsrcport, $action, $cgroup
+        $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above, $ct_dir_ctrl,
+        $ctorigdstport, $ctorigsrcport, $action, $cgroup
       ].delete('').join(' ')
 
       $filtered_params = {

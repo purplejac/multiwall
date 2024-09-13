@@ -294,7 +294,7 @@ describe 'multiwall::rule' do
             'name' => '010 ctorigsrcport for 8888 and masq',
             'chain' => 'POSTROUTING',
             'table' => 'nat',
-            'proto' => 'tcp',
+            'ctproto' => 6,
             'ctorigsrcport' => '8888',
             'jump' => 'masquerade',
           }
@@ -309,7 +309,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('POSTROUTING-ctorigsrcport_for_8888_and_masq').with(
               'ensure' => 'present',
               'table' => "inet-#{params['table']}",
-              'content' => %r{ip protocol tcp *ct original proto-src 8888 masquerade},
+              'content' => %r{ip protocol 6 *ct original proto-src 8888 masquerade},
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])
