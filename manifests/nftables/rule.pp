@@ -273,57 +273,15 @@ define multiwall::nftables::rule (
       }
 
       #
-      # Merged management of the simpler conntrack flow management to simplify the reading and avoid
-      # code duplication.
+      # There are several potential permutations of the conntract traffic management,
+      # while some are more likely than others, it made sense to support them all and
+      # trust the users. 
+      # So management of the address and port/directional management is farmed out to 
+      # the setup_ct_rule function, which will return a properly formatted string
+      # of the relevant conttrack parameters
       #
-
-      if $params['ctorigdst'] or $params['ctrepldst'] or $params['ctorigsrc'] or $params['ctoreplsrc'] {
-        if $params['ctorigdst'] or $params['ctorepldst'] {
-          $ip_addr_dir = 'saddr'
-          $ct_addr_dir = 'daddr'
-
-          if $params['ctorigdst'] {
-            $ct_target = $params['ctorigdst']
-          } else {
-            $ct_target = $params['ctrepldst']
-          }
-        } else {
-          $ip_addr_dir = 'daddr'
-          $ct_addr_dir = 'saddr'
-
-          if $params['ctorigsrc'] {
-            $ct_target = $params['ctorigsrc']
-          } else {
-            $ct_target = $params['ctreplsrc']
-          }
-        }
-
-        if $params['ctorigdst'] or $params['ctorigsrc'] {
-          $traffic_type = 'original'
-        } else {
-          $traffic_type = 'reply'
-        }
-
-        if $saddr == '' and $daddr == '' {
-          $ct_dir_ctrl = "ip ${ip_addr_dir} 0.0.0.0 ct ${traffic_type} ip ${ct_addr_dir} ${ct_target}"
-        } else {
-          $ct_dir_ctrl = "ct ${traffic_type} ${ct_addr_dir} ${ct_target}"
-        }
-      } else {
-        $ct_dir_ctrl = ''
-      }
-
-      if $params['ctorigdstport'] {
-        $ctorigdstport = "ct original proto-dst ${params['ctorigdstport']}"
-      } else {
-        $ctorigdstport = ''
-      }
-
-      if $params['ctorigsrcport'] {
-        $ctorigsrcport = "ct original proto-src ${params['ctorigsrcport']}"
-      } else {
-        $ctorigsrcport = ''
-      }
+      
+      $conntrack = multiwall::setup_ct_rules($params)
 
       if $params['ctproto'] and ($params['ctorigdstport'] or $params['ctorigsrcport']) {
           $set_proto = $params['ctproto']
@@ -345,8 +303,8 @@ define multiwall::nftables::rule (
 
       $content = [
         $saddr, $daddr, $ctdir, $proto, $sport, $dport, $log_prefix,
-        $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above, $ct_dir_ctrl,
-        $ctorigdstport, $ctorigsrcport, $action, $cgroup
+        $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above,
+        $conntrack, $action, $cgroup
       ].delete('').join(' ')
 
       $filtered_params = {
