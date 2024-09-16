@@ -194,14 +194,22 @@ define multiwall::nftables::rule (
       if $params['connlimit_mask'] {
         $netmask = multiwall::cidr2netmask($params['connlimit_mask'])
         $saddr = "ip saddr & ${netmask}"
-      } elsif $params['source'] {
-        $saddr = "ip saddr ${params['source']}"
+      } elsif $params['source'] or $params['src_range'] {
+        if $params['src_range'] {
+          $saddr = "ip saddr ${params['src_range']}"
+        } else {
+          $saddr = "ip saddr ${params['source']}"
+        }
       } else {
         $saddr = ''
       }
 
-      if $params['destination'] {
-        $daddr = "ip daddr ${params['destination']}"
+      if $params['destination'] or $params['dst_range'] {
+        if $params['dst_range'] {
+          $daddr = "ip daddr ${params['dst_range']}"
+        } else {
+          $daddr = "ip daddr ${params['destination']}"
+        } 
       } else {
         $daddr = ''
       }
@@ -301,11 +309,44 @@ define multiwall::nftables::rule (
         $proto = $set_proto
       }
 
-      $content = [
+      if $params['ctstatus'] {
+        if $params['ctstatus'] =~ Array {
+          $fmt_status = $params['ctstatus'].join(',')
+        } else {
+          $fmt_status = $params['ctstatus']
+        }
+
+        $ctstatus = "ct status ${fmt_status.downcase()}"
+      } else {
+        $ctstatus = ''
+      }
+
+      if $params['date_start'] {
+        $start_epoch = multiwall::time_to_epoch($params['date_start'])
+
+        $filter_start_time = "meta time >= ${start_epoch}"
+      } else {
+        $filter_start_time = ''
+      }
+
+      if $params['date_stop'] {
+        $stop_epoch = multiwall::time_to_epoch($params['date_stop'])
+
+        $filter_stop_time = "meta time <= ${stop_epoch}"
+      } else {
+        $filter_stop_time = ''
+      }
+
+      $all_content = [
         $saddr, $daddr, $ctdir, $proto, $sport, $dport, $log_prefix,
         $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above,
-        $conntrack, $action, $cgroup
-      ].delete('').join(' ')
+        $conntrack, $ctstatus, $filter_start_time, $filter_stop_time,
+        $action, $cgroup
+      ]
+
+      $content = ($all_content.filter |$parameter| {
+        ! $parameter.empty()
+      }).join(' ')
 
       $filtered_params = {
         'ensure'  => $params['ensure'],

@@ -43,7 +43,7 @@ describe 'multiwall::rule' do
               'ensure' => 'present',
               'table' => 'inet-filter',
               'order' => '03',
-              'content' => %r{ip daddr 127.0.0.1/8 ip protocol \{ icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp \}  reject},
+              'content' => 'ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } reject',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
@@ -323,7 +323,78 @@ describe 'multiwall::rule' do
           end
         }
       end
+      context 'testing ctstatus set.' do
+        let(:params) do
+          {
+            'name' => '011 ctstatus to expected and assured',
+            'chain' => 'INPUT',
+            'ctstatus' => ['EXPECTED', 'ASSURED'],
+            'source' => '0.0.0.0',
+            'jump' => 'accept',
+          }
+        end
+        let(:title) { params['name'] }
 
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('INPUT-ctstatus_to_expected_and_assured').with(
+              'ensure' => 'present',
+              'table' => 'inet-filter',
+              'content' => %r{ip saddr 0.0.0.0 *ct status expected,assured accept},
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'source' => params['source'],
+              'ctstatus' => params['ctstatus'],
+              'jump' => params['jump'],
+            )
+          end
+        }
+      end
+
+      context 'Testing date settings.' do
+        let(:params) do
+          {
+            'name' => '012 date_start setting timestamp to enforce',
+            'chain' => 'OUTPUT',
+            'destination' => '0.0.0.0',
+            'dport' => '443',
+            'date_start' => '2023-01-01T00:00:00',
+            'date_stop' => '2025-01-01T00:00:00',
+            'jump' => 'accept',
+            'proto' => 'tcp',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('OUTPUT-date_start_setting_timestamp_to_enforce').with(
+              'ensure' => 'present',
+              'table' => 'inet-filter',
+              'content' => 'ip daddr 0.0.0.0 ip protocol tcp dport 443 meta time >= 1672531200 meta time <= 1735689600 accept',
+              'order' => '13',
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'destination' => params['destination'],
+              'dport' => params['dport'],
+              'date_start' => params['date_start'],
+              'date_stop' => params['date_stop'],
+              'jump' => params['jump'],
+              'proto' => params['proto'],
+            )
+          end
+        }
+      end
     end
   end
 end
