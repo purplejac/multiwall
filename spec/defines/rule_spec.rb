@@ -395,6 +395,44 @@ describe 'multiwall::rule' do
           end
         }
       end
+
+      context 'Testing src_range and dst_range overriding address sets.' do
+        let(:params) do
+          {
+            'name' => '013 targeting ranges over source and destinations',
+            'chain' => 'INPUT',
+            'src_range' => '10.10.10.10-10.10.20.10',
+            'dst_range' => '20.20.20.1-20.20.30.30',
+            'source' => '1.1.1.1',
+            'destination' => '2.2.2.2',
+            'jump' => 'reject',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('INPUT-targeting_ranges_over_source_and_destinations').with(
+              'ensure' => 'present',
+              'table' => 'inet-filter',
+              'content' => "ip saddr #{params['src_range']} ip daddr #{params['dst_range']} #{params['jump']}",
+              'order' => '14',
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'source' => params['source'],
+              'destination' => params['destination'],
+              'src_range' => params['src_range'],
+              'dst_range' => params['dst_range'],
+              'jump' => params['jump'],
+            )
+          end
+        }
+      end
     end
   end
 end

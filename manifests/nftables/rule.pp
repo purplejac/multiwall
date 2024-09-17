@@ -337,16 +337,26 @@ define multiwall::nftables::rule (
         $filter_stop_time = ''
       }
 
-      $all_content = [
-        $saddr, $daddr, $ctdir, $proto, $sport, $dport, $log_prefix,
-        $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above,
-        $conntrack, $ctstatus, $filter_start_time, $filter_stop_time,
-        $action, $cgroup
-      ]
+      if $params['dst_type'] or $params['src_type'] {
+        $direction_type = multiwall::format_types($params)
+      } else {
+        $direction_type = []
+      }
 
-      $content = ($all_content.filter |$parameter| {
-        ! $parameter.empty()
-      }).join(' ')
+      if $direction_type == [] {
+        $all_content = [
+          $saddr, $daddr, $ctdir, $proto, $sport, $dport, $log_prefix,
+          $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above,
+          $conntrack, $ctstatus, $filter_start_time, $filter_stop_time,
+          $action, $cgroup
+        ]
+
+        $content = ($all_content.filter |$parameter| {
+          ! $parameter.empty()
+        }).join(' ')
+      } else {
+        $content = $direction_type
+      }
 
       $filtered_params = {
         'ensure'  => $params['ensure'],
