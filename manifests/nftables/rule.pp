@@ -349,11 +349,17 @@ define multiwall::nftables::rule (
         $type_mgmt = ''
       }
 
+      if $params['gateway'] {
+        $gateway = "dup to ${params['gateway']}"
+      } else {
+        $gateway = ''
+      }
+
       $all_content = [
         $saddr, $daddr, $type_mgmt, $ctdir, $proto, $sport, $dport, $log_prefix,
         $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above,
         $conntrack, $ctstatus, $filter_start_time, $filter_stop_time,
-        $action, $cgroup
+        $gateway, $action, $cgroup
       ]
 
       $content = ($all_content.filter |$parameter| {

@@ -12,7 +12,6 @@ describe 'multiwall::rule' do
            ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
            ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
            (facts[:os]['name'] == 'Fedora')
-
            true
         else
           false
@@ -434,7 +433,7 @@ describe 'multiwall::rule' do
         }
       end
 
-      context 'Testing dst_type blackhole setting - one works both work.'
+      context 'Testing dst_type blackhole setting - one works both work.' do
         let(:params) do
           {
             'name' => '014 testing dst_type blackhole to cover both',
@@ -443,26 +442,89 @@ describe 'multiwall::rule' do
             'jump' => 'drop',
           }
         end
-       let(:title) { params['name'] }
+        let(:title) { params['name'] }
 
-      it {
-       if os_check
-         is_expected.to contain_multiwall__nftables__rule(params['name'])
-         is_expected.to contain_nftables__rule('INPUT-testing_dst_type_blackhole_to_cover_both').with(
-           'ensure' => 'present',
-           'table' => 'inet-filter',
-           'content' => 'ip daddr 10.10.10.10,20.20.20.20 drop',
-         )
-       else
-         is_expected.to contain_multiwall__iptables__rule(params['name'])
-         is_expected.to contain_firewall(params['name']).with(
-           'ensure' => 'present',
-           'chain' => 'INPUT',
-           'dst_type' => 'BLACKHOLE',
-           'jump' => 'drop',
-         )
-       end
-      }
+        it {
+         if os_check
+           is_expected.to contain_multiwall__nftables__rule(params['name'])
+           is_expected.to contain_nftables__rule('INPUT-testing_dst_type_blackhole_to_cover_both').with(
+             'ensure' => 'present',
+             'table' => 'inet-filter',
+             'content' => 'ip daddr 10.10.10.10,20.20.20.20 drop',
+           )
+         else
+           is_expected.to contain_multiwall__iptables__rule(params['name'])
+           is_expected.to contain_firewall(params['name']).with(
+             'ensure' => 'present',
+             'chain' => 'INPUT',
+             'dst_type' => 'BLACKHOLE',
+             'jump' => 'drop',
+           )
+         end
+        }
+      end
+
+      context 'Testing dst_type MULTICAST to validate function implementation.' do
+        let(:params) do
+          {
+            'name' => '015 testing dst_type multicast implementation',
+            'chain' => 'INPUT',
+            'dst_type' => 'MULTICAST',
+            'jump' => 'drop',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('INPUT-testing_dst_type_multicast_implementation').with(
+              'ensure' => 'present',
+              'table' => 'inet-filter',
+              'content' => 'fib daddr type multicast drop'
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => 'INPUT',
+              'dst_type' => 'MULTICAST',
+              'jump' => 'drop',
+            )
+          end
+        }
+      end
+
+      context 'Testing gateway flag with duplication forwarding.' do
+        let(:params) do
+          {
+            'name' => '016 testing gateway duplication forwarding',
+            'chain' => 'PREROUTING',
+            'gateway' => '172.0.0.1',
+            'proto' => 'tcp',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('PREROUTING-testing_gateway_duplication_forwarding').with(
+              'ensure' => 'present',
+              'table' => 'inet-filter',
+              'content' => 'ip protocol tcp dup to 172.0.0.1',
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'gateway' => params['gateway'],
+              'proto' => params['proto'],
+            )
+          end
+        }
+      end
     end
   end
 end
