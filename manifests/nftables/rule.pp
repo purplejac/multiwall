@@ -194,8 +194,11 @@ define multiwall::nftables::rule (
       if $params['connlimit_mask'] {
         $netmask = multiwall::cidr2netmask($params['connlimit_mask'])
         $saddr = "ip saddr & ${netmask}"
-      } elsif $params['source'] or $params['src_range'] {
-        if $params['src_range'] {
+      } elsif $params['source'] or $params['src_range'] or ($params['src_type'] and $params['src_type'] =~ /(blackhole|BLACKHOLE)/) {
+        if $params['src_type'] and $params['src_type'] =~ /(blackhole|BLACKHOLE)/ {
+          $saddr = "ip saddr ${facts['multiwall']['blackhole_targets'].join(',')}"
+        }
+        elsif $params['src_range'] {
           $saddr = "ip saddr ${params['src_range']}"
         } else {
           $saddr = "ip saddr ${params['source']}"
@@ -204,8 +207,11 @@ define multiwall::nftables::rule (
         $saddr = ''
       }
 
-      if $params['destination'] or $params['dst_range'] {
-        if $params['dst_range'] {
+      if $params['destination'] or $params['dst_range'] or ($params['dst_type'] and $params['dst_type'] =~ /(blackhole|BLACKHOLE)/) {
+        if $params['dst_type'] and $params['dst_type'] =~ /(blackhole|BLACKHOLE)/ {
+          $daddr = "ip daddr ${facts['multiwall']['blackhole_targets'].join(',')}"
+        }
+        elsif $params['dst_range'] {
           $daddr = "ip daddr ${params['dst_range']}"
         } else {
           $daddr = "ip daddr ${params['destination']}"
@@ -338,25 +344,21 @@ define multiwall::nftables::rule (
       }
 
       if $params['dst_type'] or $params['src_type'] {
-        $direction_type = multiwall::format_types($params)
+        $type_mgmt = multiwall::nft_format_types($params)
       } else {
-        $direction_type = []
+        $type_mgmt = ''
       }
 
-      if $direction_type == [] {
-        $all_content = [
-          $saddr, $daddr, $ctdir, $proto, $sport, $dport, $log_prefix,
-          $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above,
-          $conntrack, $ctstatus, $filter_start_time, $filter_stop_time,
-          $action, $cgroup
-        ]
+      $all_content = [
+        $saddr, $daddr, $type_mgmt, $ctdir, $proto, $sport, $dport, $log_prefix,
+        $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above,
+        $conntrack, $ctstatus, $filter_start_time, $filter_stop_time,
+        $action, $cgroup
+      ]
 
-        $content = ($all_content.filter |$parameter| {
-          ! $parameter.empty()
-        }).join(' ')
-      } else {
-        $content = $direction_type
-      }
+      $content = ($all_content.filter |$parameter| {
+        ! $parameter.empty()
+      }).join(' ')
 
       $filtered_params = {
         'ensure'  => $params['ensure'],
