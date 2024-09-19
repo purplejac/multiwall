@@ -525,6 +525,39 @@ describe 'multiwall::rule' do
           end
         }
       end
+
+      context 'Testing uid and gid parameters.' do
+        let(:params) do
+          {
+            'name' => '017 testing uid and gid parameters',
+            'chain' => 'MANGLE',
+            'uid' => '1000',
+            'gid' => '1000',
+            'jump' => 'accept',
+          }
+        end
+        let(:title){ params['name'] }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('MANGLE-testing_uid_and_gid_parameters').with(
+              'ensure' => 'present',
+              'table' => 'inet-filter',
+              'content' => 'skuid 1000 skgid 1000 accept',
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'uid' => params['uid'],
+              'gid' => params['gid'],
+              'jump' => params['jump'],
+            )
+          end
+        }
+      end
     end
   end
 end

@@ -355,11 +355,23 @@ define multiwall::nftables::rule (
         $gateway = ''
       }
 
+      if $params['uid'] {
+        $uid = "skuid ${params['uid']}"
+      } else {
+        $uid = ''
+      }
+
+      if $params['gid'] {
+        $gid = "skgid ${params['gid']}"
+      } else {
+        $gid = ''
+      }
+
       $all_content = [
-        $saddr, $daddr, $type_mgmt, $ctdir, $proto, $sport, $dport, $log_prefix,
-        $clamp_mss, $cluster_conf, $connlimit_upto, $connlimit_above,
-        $conntrack, $ctstatus, $filter_start_time, $filter_stop_time,
-        $gateway, $action, $cgroup
+        $saddr, $daddr, $type_mgmt, $ctdir, $proto, $sport, $dport, $uid,
+        $gid, $log_prefix, $clamp_mss, $cluster_conf, $connlimit_upto,
+        $connlimit_above, $conntrack, $ctstatus, $filter_start_time,
+        $filter_stop_time, $gateway, $action, $cgroup
       ]
 
       $content = ($all_content.filter |$parameter| {
