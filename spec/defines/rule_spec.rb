@@ -558,6 +558,35 @@ describe 'multiwall::rule' do
           end
         }
       end
+
+      context 'Testing goto verdicts.' do
+        let(:params) do
+          {
+            'name' => '018 Testing goto verdicts parameter',
+            'chain' => 'INPUT',
+            'goto' => 'TESTCHAIN',
+          }
+        end
+        let(:title) { params['name'] }
+
+        it {
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('INPUT-Testing_goto_verdicts_parameter').with(
+              'ensure' => 'present',
+              'table' => 'inet-filter',
+              'content' => "goto #{params['goto']}"
+            )
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
+              'ensure' => 'present',
+              'chain' => params['chain'],
+              'goto' => params['goto'],
+            )
+          end
+        }
+      end
     end
   end
 end

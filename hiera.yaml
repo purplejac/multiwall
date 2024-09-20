@@ -13,6 +13,9 @@ hierarchy:
       - "os/%{facts.os.family}/%{facts.os.release.major}.yaml"
         # Used for Solaris
       - "os/%{facts.os.family}/%{facts.kernelrelease}.yaml"
+  - name: 'Firewall Translations'    
+    paths:
+      - "firewalls/*.yaml"
   - name: "osname"
     paths:
       - "os/%{facts.os.family}/%{facts.os.name}-%{facts.os.release.major}.yaml"

@@ -367,11 +367,17 @@ define multiwall::nftables::rule (
         $gid = ''
       }
 
+      if $params['goto'] {
+        $goto = "goto ${params['goto']}"
+      } else {
+        $goto = ''
+      }
+
       $all_content = [
         $saddr, $daddr, $type_mgmt, $ctdir, $proto, $sport, $dport, $uid,
         $gid, $log_prefix, $clamp_mss, $cluster_conf, $connlimit_upto,
         $connlimit_above, $conntrack, $ctstatus, $filter_start_time,
-        $filter_stop_time, $gateway, $action, $cgroup
+        $filter_stop_time, $gateway, $goto, $action, $cgroup
       ]
 
       $content = ($all_content.filter |$parameter| {
