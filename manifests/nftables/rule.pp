@@ -152,7 +152,8 @@ define multiwall::nftables::rule (
       # limit to 'bursts per second' and a max of one packet allowed to exceed.
       #
       if 'burst' in $params {
-        $burst = "limit rate ${params['burst']}/second burst 1"
+        #        $burst = "limit rate ${params['burst']}/second burst 1"
+        $burst = lookup('mutliwall:nftables:burst')
       }
 
       #
@@ -221,7 +222,8 @@ define multiwall::nftables::rule (
       }
 
       if $params['dport'] {
-        $dport = "dport ${params['dport']}"
+        #$dport = "dport ${params['dport']}"
+        $dport = lookup('multiwall:nftables:dport')
       } else {
         $dport = ''
       }

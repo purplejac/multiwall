@@ -1,0 +1,3 @@
+---
+multiwall:nftables:dport: "dport %{params.dport}"
+multiwall:nftables:burst: "limit rate ${params['burst']}/second burst 1"

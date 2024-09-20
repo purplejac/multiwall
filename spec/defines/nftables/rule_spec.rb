@@ -33,7 +33,7 @@ describe 'multiwall::nftables::rule' do
 	}
 
   on_supported_os.each do |os, os_facts|
-    context "on #{os}" do
+    context "on #{os} basic rule" do
       let(:facts) { os_facts }
 
       it { is_expected.to compile }
@@ -44,6 +44,37 @@ describe 'multiwall::nftables::rule' do
             'ensure' => params['params']['ensure'],
             'table' => 'inet-filter',
             'content' => 'ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } reject',
+          )
+        end
+      }
+    end
+
+    context "Testing dport parameter." do
+      let(:params) do
+        {
+          'name' => '050 testing dport setting with some basics',
+          'params' => {
+            'ensure' => 'present',
+            'chain' => 'OUTPUT',
+            'destination' => '10.10.10.10',
+            'proto' => 'tcp',
+            'dport' => '8080',
+            'jump' => 'accept',
+          }
+        }
+      end
+      let(:facts) { os_facts }
+
+      it { is_expected.to compile }
+      it {
+        if os_check
+          is_expected.to contain_multiwall__nftables__rule(params['name'])
+          is_expected.to contain_nftables__rule('OUTPUT-testing_dport_setting_with_some_basics').with(
+            'name' => 'OUTPUT-testing_dport_setting_with_some_basics',
+            'ensure' => 'present',
+            'table' => 'inet-filter',
+#            'content' => "ip daddr #{params['destination']} ip protocol #{params['proto']} dport #{params['dport']} #{params['jump']}",
+            'content' => 'ip daddr 10.10.10.10 ip protocol tcp dport 8080 accept',
           )
         end
       }

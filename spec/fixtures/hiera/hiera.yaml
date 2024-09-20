@@ -22,6 +22,9 @@ hierarchy:
     paths:
       - "os/%{facts.os.name}.yaml"
       - "os/%{facts.os.family}.yaml"
+  - name: 'Firewall Translations'
+    paths:
+      - "firewalls/nftables.yaml"
   - name: "Spec Hiera"
     path: "spec.yaml"
   - name: "common"
