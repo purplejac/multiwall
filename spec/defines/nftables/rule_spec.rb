@@ -19,18 +19,18 @@ describe 'multiwall::nftables::rule' do
   end
   let(:title) { params['name'] }
 
-	let(:os_check) {
-		if ((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
-			 ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
-			 ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
-			 ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
-			 (facts[:os]['name'] == 'Fedora')
+  let(:os_check) do
+    if ((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
+       ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
+       ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
+       ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
+       (facts[:os]['name'] == 'Fedora')
 
-			 true
-		else
-			false
-		end
-	}
+      true
+    else
+      false
+    end
+  end
 
   on_supported_os.each do |os, os_facts|
     context "on #{os} basic rule" do
@@ -49,7 +49,7 @@ describe 'multiwall::nftables::rule' do
       }
     end
 
-    context "Testing dport parameter." do
+    context 'Testing dport parameter.' do
       let(:params) do
         {
           'name' => '050 testing dport setting with some basics',
@@ -73,8 +73,7 @@ describe 'multiwall::nftables::rule' do
             'name' => 'OUTPUT-testing_dport_setting_with_some_basics',
             'ensure' => 'present',
             'table' => 'inet-filter',
-#            'content' => "ip daddr #{params['destination']} ip protocol #{params['proto']} dport #{params['dport']} #{params['jump']}",
-            'content' => 'ip daddr 10.10.10.10 ip protocol tcp dport 8080 accept',
+            'content' => "ip daddr #{params['destination']} ip protocol #{params['proto']} dport #{params['dport']} accept",
           )
         end
       }

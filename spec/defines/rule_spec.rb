@@ -5,18 +5,18 @@ require 'spec_helper'
 describe 'multiwall::rule' do
   on_supported_os.each do |os, os_facts|
     context "on #{os}" do
-      let(:facts) { os_facts.merge({:multiwall => {'blackhole_targets' => ['10.10.10.10','20.20.20.20']} }) }
-      let(:os_check) {
+      let(:facts) { os_facts.merge({ multiwall: { 'blackhole_targets' => ['10.10.10.10', '20.20.20.20'] } }) }
+      let(:os_check) do
         if ((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
            ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
            ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
            ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
            (facts[:os]['name'] == 'Fedora')
-           true
+          true
         else
           false
         end
-      }
+      end
 
       context 'testing basic rule' do
         let(:params) do
@@ -35,7 +35,7 @@ describe 'multiwall::rule' do
         it { is_expected.to compile }
         it {
           is_expected.to contain_multiwall__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
-        
+
           if os_check
             is_expected.to contain_multiwall__nftables__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
             is_expected.to contain_nftables__rule('INPUT-reject_local_traffic_not_on_loopback_interface').with(
@@ -146,7 +146,7 @@ describe 'multiwall::rule' do
         }
       end
 
-      context 'testing ctdir with reply.' do 
+      context 'testing ctdir with reply.' do
         let(:params) do
           {
             'name' => '005 ctdir set to reply',
@@ -445,22 +445,22 @@ describe 'multiwall::rule' do
         let(:title) { params['name'] }
 
         it {
-         if os_check
-           is_expected.to contain_multiwall__nftables__rule(params['name'])
-           is_expected.to contain_nftables__rule('INPUT-testing_dst_type_blackhole_to_cover_both').with(
+          if os_check
+            is_expected.to contain_multiwall__nftables__rule(params['name'])
+            is_expected.to contain_nftables__rule('INPUT-testing_dst_type_blackhole_to_cover_both').with(
              'ensure' => 'present',
              'table' => 'inet-filter',
              'content' => 'ip daddr 10.10.10.10,20.20.20.20 drop',
            )
-         else
-           is_expected.to contain_multiwall__iptables__rule(params['name'])
-           is_expected.to contain_firewall(params['name']).with(
+          else
+            is_expected.to contain_multiwall__iptables__rule(params['name'])
+            is_expected.to contain_firewall(params['name']).with(
              'ensure' => 'present',
              'chain' => 'INPUT',
              'dst_type' => 'BLACKHOLE',
              'jump' => 'drop',
            )
-         end
+          end
         }
       end
 
@@ -481,7 +481,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-testing_dst_type_multicast_implementation').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => 'fib daddr type multicast drop'
+              'content' => 'fib daddr type multicast drop',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])
@@ -536,7 +536,7 @@ describe 'multiwall::rule' do
             'jump' => 'accept',
           }
         end
-        let(:title){ params['name'] }
+        let(:title) { params['name'] }
 
         it {
           if os_check
@@ -575,7 +575,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-Testing_goto_verdicts_parameter').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => "goto #{params['goto']}"
+              'content' => "goto #{params['goto']}",
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])

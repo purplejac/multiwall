@@ -1,9 +1,10 @@
 # frozen_string_literal: true
+
 #
 # Build multiwall factset
 #
 
-Facter.add(:multiwall, :type => :aggregate) do
+Facter.add(:multiwall, type: :aggregate) do
   chunk(:blackhole_route) do
     confine kernel: 'Linux'
     multiwall_info = {}
@@ -11,9 +12,9 @@ Facter.add(:multiwall, :type => :aggregate) do
     blackhole_targets = []
 
     # Retrieve all blackhole routes and present the targeted addresses
-    (`ip route show type blackhole`).split("\n").each { |line|
-      blackhole_targets.append(line.split(' ')[1].strip())
-    }
+    `ip route show type blackhole`.split("\n").each do |line|
+      blackhole_targets.append(line.split(' ')[1].strip)
+    end
     multiwall_info['blackhole_targets'] = blackhole_targets
 
     #
@@ -23,9 +24,9 @@ Facter.add(:multiwall, :type => :aggregate) do
     #
     anycast_targets = []
 
-    (`ip route show type anycast`).split("\n").each { |line|
-      anycast_targets.append(line).split(" ")[1].strip()
-    }
+    `ip route show type anycast`.split("\n").each do |line|
+      anycast_targets.append(line).split(' ')[1].strip
+    end
 
     multiwall_info['anycast'] = anycast_targets
 

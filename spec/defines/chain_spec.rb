@@ -20,18 +20,18 @@ describe 'multiwall::chain' do
     context "on #{os}" do
       let(:facts) { os_facts }
 
-      let(:os_check) {
+      let(:os_check) do
         if ((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
            ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
            ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.04') ||
            ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
            (facts[:os]['name'] == 'Fedora')
 
-           true
+          true
         else
           false
         end
-      }
+      end
 
       it { is_expected.to compile }
 

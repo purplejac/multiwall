@@ -10,6 +10,11 @@
 #   The set of parameters being used to define the 'firewall' resource,
 #   as outlined in the documentation for puppetlabs-firewall
 #
+# @param param_list [Array]
+#   List of parameters to be managed in the module, in the order in which
+#   the nftables command should take them.
+#   ONLY PARAMETERS IN THIS LIST WILL BE ENFORCED!
+#
 # @param fail_on_val_fail [Boolean]
 #   Decides whether to fail when parameter validation fails or to just
 #   create a notification resource to advice the failure but continue
@@ -33,6 +38,7 @@
 #
 define multiwall::nftables::rule (
   Hash $params,
+  Array $param_list,
   Boolean $fail_on_val_fail = false,
   Integer $high_offset = 20,
   Integer $low_offset = 10,
@@ -50,6 +56,7 @@ define multiwall::nftables::rule (
     if $fail_on_val_fail {
       fail($error_message)
     } else {
+      warning($error_message)
       notify { $error_message: }
     }
   } else {
@@ -88,11 +95,7 @@ define multiwall::nftables::rule (
     if $params['ensure'] == 'absent' {
       $filtered_params = { ensure => $params['ensure'] }
     } else {
-      if $params['protocol'] {
-        $protocol = $params['protocol'] ? { default => 'inet', 'iptables' => 'ip', 'ip6tables' => 'ip6', 'IPv4' => 'ip', 'IPv6' => 'ip6' }
-      } else {
-        $protocol = 'inet'
-      }
+      $protocol = $params['protocol'] ? { default => 'inet', 'iptables' => 'ip', 'ip6tables' => 'ip6', 'IPv4' => 'ip', 'IPv6' => 'ip6' }
 
       if $params['table'] {
         $table = $params['table']
@@ -100,9 +103,9 @@ define multiwall::nftables::rule (
         $table = 'filter'
       }
 
-      $action_commands = ['ACCEPT', 'accept', 'REJECT', 'reject', 'DROP', 'drop']
-
       $need_meta = ['mark', 'cgroup']
+      $skip_vals = ['src_type', 'dst_type', 'todest', 'tosource', 'to', 'toports', 'connmar', 'ctstate', 'clusterip_hash_init', 'clusterip_local_node', 'conntrack']
+
       #
       # Taking the 'beg forgiveness' approach to state assignment.
       # as ctstate is largely outdated, we'll assume that if it is declared
@@ -122,38 +125,82 @@ define multiwall::nftables::rule (
         $log_prefix = undef
       }
 
-      $jump_commands = {
-        'queue'      => 'queue',
-        'return'     => 'return',
-        'dnat'       => "dnat ${params['todest']}",
-        'snat'       => "snat ${params['tosource']}",
-        'log'        => $log_prefix,
-        'netmap'     => "netmap to ${params['to']}",
-        'masquerade' => 'masquerade',  # TO WHAT THOUGH?
-        'redirect'   => "redirect ${params['toports']}", # TO WHAT THOUGH?
-        'mark'       => "meta mark set ${params['connmark']}", # ??? INVESTIGATE
-        'ct'         => "ct state ${params['ctstate']}", # Need to have a think about how to get this and state to match exclusively, individually
+      if 'connlimit_mask' in $params {
+        $netmask = multiwall::cidr2netmask($params['connlimit_mask'])
       }
 
-      if  'action' in $params {
-        $action = $params['action'].downcase()
-      } elsif ('jump' in $params) {
-        if ($params['jump'] in $action_commands) {
-          $action = $params['jump'].downcase()
-        } else {
-          $action = $jump_commands[$params['jump']]
-        }
+      if $params['source'] or $params['src_range'] or ($params['src_type'] and $params['src_type'] =~ /(blackhole|BLACKHOLE)/) {
+        $source = $facts['multiwall']['blackhole_targets'].join(',')
+      } elsif $params['src_range'] {
+        $source = $params['src_range']
       } else {
-        $action = undef
+        $source = $params['source']
+      }
+
+      if $params['destination'] or $params['dst_range'] or ($params['dst_type'] and $params['dst_type'] =~ /(blackhole|BLACKHOLE)/) {
+        $destination = $facts['multiwall']['blackhole_targets'].join(',')
+      } elsif $params['dst_range'] {
+        $destination = $params['dst_range']
+      } else {
+        $destination = $params['destination']
       }
 
       #
-      # There is no direct burst parameter for nftables, instead we'll mimick by implementing by setting the rate
-      # limit to 'bursts per second' and a max of one packet allowed to exceed.
+      # To manage conntrack protocol overriding 'standard' protocol definition, it is set ahead
+      # of reading the actual protocol settings through the params loop
       #
-      if 'burst' in $params {
-        #        $burst = "limit rate ${params['burst']}/second burst 1"
-        $burst = lookup('mutliwall:nftables:burst')
+      if $params['ctproto'] and ($params['ctorigdstport'] or $params['ctorigsrcport']) {
+        $set_proto = $params['ctproto']
+      } elsif $params['proto'] {
+        if $params['proto'] == 'all' {
+          $set_proto = lookup('multiwall::nftables::rule::all_protocols')
+        } else {
+          $set_proto = $params['proto']
+        }
+      }
+
+      $content = $param_list.reduce('') |$body, $parameter| {
+        if $parameter in $params and ! empty($params[$parameter]) {
+          $param_value = $params[$parameter]
+
+          if $parameter == 'jump' {
+            $jump_action = lookup("multiwall::nftables::rule::jump_commands.${parameter.downcase()}")
+          } elsif $parameter == 'ctdir' and ! ($param_check[0] in [3, 4]) {
+            $ct_direction = lookup("multiwall::nftables::rule::ctdirections.${param_value}")
+          } elsif $parameter in ['proto', 'ctproto'] {
+            if empty($params['saddr']) and empty($params['daddr']) {
+              $proto_param = lookup('multiwall::nftables::rule::proto_no_src_dst')
+            } else {
+              $proto_param = lookup('multiwall::nftables::rule::proto_src_dst')
+            }
+          } elsif $parameter == 'ctstatus' {
+            if $parameter =~ Array {
+              $fmt_ct_status = $parameter.join(',').downcase()
+            } else {
+              $fmt_ct_status = $parameter.downcase()
+            }
+          } elsif $parameter in ['date_start', 'date_stop'] {
+            $epoch_date = multiwall::time_to_epoch(params[$parameter])
+          }
+
+          if $parameter == 'conntrack' {
+            # There are several potential permutations of the conntract traffic management,
+            # while some are more likely than others, it made sense to support them all and
+            # trust the users.
+            # So management of the address and port/directional management is farmed out to
+            # the setup_ct_rule function, which will return a properly formatted string
+            # of the relevant conttrack parameters
+            #
+            "${body} ${multiwall::setup_ct_rules($params)}"
+          } elsif $parameter in ['dst_type', 'src_type'] and $body !~ /fib [d|s]addr type/ {
+            "${body} ${multiwall::nft_format_types($params)}"
+          } else {
+            $param_rule = lookup("multiwall::nftables::rule::${parameter}")
+            "${body} ${param_rule}"
+          }
+        } else {
+          $body
+        }
       }
 
       #
@@ -163,12 +210,6 @@ define multiwall::nftables::rule (
       # $bytecode = "-f ${params['bytecode']}" - part of the problem here is that nftables expects a file location, rather than a code string
       #
 
-      if 'cgroup' in $params {
-        $cgroup = "meta nfproto cgroupv2 cgroup ${params['cgroup']}"
-      } else {
-        $cgroup = undef
-      }
-
       #
       # Checksum fill isn't really a direct option in nftables, may need constructing - disregarding for now
       #
@@ -176,215 +217,6 @@ define multiwall::nftables::rule (
       #   $checksum_fill = 
       # }
       #
-
-      #
-      # As there's no pre-defined pmtu setting we will default to 1500 but allow for it to be overridden through hiera.
-      #
-
-      #if 'pmtu' in $params {
-      #  $pmtu = $params['pmtu']
-      #} else {
-      #  $pmtu = 1500
-      #}
-
-      #
-      # We then use the set pmtu to mimic the clamp_mss_to_pmtu functionality
-      #
-      #$clamp_mss_to_pmtu = "tcp flags & (fin|syn|rst|ack) == syn tcp option maxseg size set ${pmtu}"
-
-      if $params['connlimit_mask'] {
-        $netmask = multiwall::cidr2netmask($params['connlimit_mask'])
-        $saddr = "ip saddr & ${netmask}"
-      } elsif $params['source'] or $params['src_range'] or ($params['src_type'] and $params['src_type'] =~ /(blackhole|BLACKHOLE)/) {
-        if $params['src_type'] and $params['src_type'] =~ /(blackhole|BLACKHOLE)/ {
-          $saddr = "ip saddr ${facts['multiwall']['blackhole_targets'].join(',')}"
-        }
-        elsif $params['src_range'] {
-          $saddr = "ip saddr ${params['src_range']}"
-        } else {
-          $saddr = "ip saddr ${params['source']}"
-        }
-      } else {
-        $saddr = ''
-      }
-
-      if $params['destination'] or $params['dst_range'] or ($params['dst_type'] and $params['dst_type'] =~ /(blackhole|BLACKHOLE)/) {
-        if $params['dst_type'] and $params['dst_type'] =~ /(blackhole|BLACKHOLE)/ {
-          $daddr = "ip daddr ${facts['multiwall']['blackhole_targets'].join(',')}"
-        }
-        elsif $params['dst_range'] {
-          $daddr = "ip daddr ${params['dst_range']}"
-        } else {
-          $daddr = "ip daddr ${params['destination']}"
-        } 
-      } else {
-        $daddr = ''
-      }
-
-      if $params['dport'] {
-        #$dport = "dport ${params['dport']}"
-        $dport = lookup('multiwall:nftables:dport')
-      } else {
-        $dport = ''
-      }
-
-      if $params['sport'] {
-        $sport = "sport ${params['sport']}"
-      } else {
-        $sport = ''
-      }
-
-      #
-      # https://wiki.nftables.org/wiki-nftables/index.php/Mangling_packet_headers outlines this as the appropriate approach to
-      # clamp MSS to PMTU
-      # 
-      if $params['clamp_mss_to_pmtu'] {
-        $clamp_mss = 'tcp option maxseg size set rt mtu'
-      } else {
-        $clamp_mss = ''
-      }
-
-      #
-      # Mimicking cluster flag from iptables, for nftables, according to the suggestion outlined by RH using iptables-translate here:
-      # https://access.redhat.com/solutions/7033787 - deliberately not checking if all three values exist, to provoke a failure if
-      # one of the required parameters is not set - implemented according to available firewall settings and considering all other
-      # clusterip params deprecated as per the KB
-      #
-      if $params['clusterip_hash_init'] or $params['clusterip_total_nodes'] or $params['clusterip_local_node'] {
-        $cluster_conf = "jhash ct original saddr mod ${params['clusterip_total_nodes']} seed ${params['clusterip_hash_init']} eq ${params['clusterip_local_node']} meta pkgttype set host counter"
-      } else {
-        $cluster_conf = ''
-      }
-
-      #
-      # Mimicking ctdir from iptables by converting to management of ct states established,related and using the ctdir setting to
-      # decide whether to set saddr or daddr. If direction is not set correctly, will fall back to localhost target.
-      #
-      if $params['ctdir'] {
-        unless $param_check[0] == 4 or $param_check[0] == 3 {
-          $addr_command = $params['ctdir'] ? {
-            /(REPLY|reply)/       => "ip daddr ${facts['networking']['ip']}",
-            /(ORIGINAL|original)/ => "ip saddr ${facts['networking']['ip']}",
-            default               => "ip daddr 127.0.0.1",
-          }
-
-          $ctdir = "${addr_command} ct state established,related"
-        } else {
-          $ctdir = ''
-        }
-      } else {
-        $ctdir = ''
-      }
-
-      if $params['connlimit_above'] {
-        $connlimit_above = "ct count over ${params['connlimit_above']}"
-      } else {
-        $connlimit_above = ''
-      }
-
-      if $params['connlimit_upto'] {
-        $connlimit_upto = "ct count under ${params['connlimit_above']}"
-      } else {
-        $connlimit_upto = ''
-      }
-
-      #
-      # There are several potential permutations of the conntract traffic management,
-      # while some are more likely than others, it made sense to support them all and
-      # trust the users. 
-      # So management of the address and port/directional management is farmed out to 
-      # the setup_ct_rule function, which will return a properly formatted string
-      # of the relevant conttrack parameters
-      #
-      
-      $conntrack = multiwall::setup_ct_rules($params)
-
-      if $params['ctproto'] and ($params['ctorigdstport'] or $params['ctorigsrcport']) {
-          $set_proto = $params['ctproto']
-      } elsif $params['proto'] {
-        if $params['proto'] == 'all' {
-          $set_proto = '{ icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp }'
-        } else {
-          $set_proto = $params['proto']
-        }
-      } else {
-        $set_proto = ''
-      }
-
-      if $set_proto  != '' and (! $params['saddr']) and (! $params['daddr']) {
-        $proto = "ip protocol ${set_proto}"
-      } else {
-        $proto = $set_proto
-      }
-
-      if $params['ctstatus'] {
-        if $params['ctstatus'] =~ Array {
-          $fmt_status = $params['ctstatus'].join(',')
-        } else {
-          $fmt_status = $params['ctstatus']
-        }
-
-        $ctstatus = "ct status ${fmt_status.downcase()}"
-      } else {
-        $ctstatus = ''
-      }
-
-      if $params['date_start'] {
-        $start_epoch = multiwall::time_to_epoch($params['date_start'])
-
-        $filter_start_time = "meta time >= ${start_epoch}"
-      } else {
-        $filter_start_time = ''
-      }
-
-      if $params['date_stop'] {
-        $stop_epoch = multiwall::time_to_epoch($params['date_stop'])
-
-        $filter_stop_time = "meta time <= ${stop_epoch}"
-      } else {
-        $filter_stop_time = ''
-      }
-
-      if $params['dst_type'] or $params['src_type'] {
-        $type_mgmt = multiwall::nft_format_types($params)
-      } else {
-        $type_mgmt = ''
-      }
-
-      if $params['gateway'] {
-        $gateway = "dup to ${params['gateway']}"
-      } else {
-        $gateway = ''
-      }
-
-      if $params['uid'] {
-        $uid = "skuid ${params['uid']}"
-      } else {
-        $uid = ''
-      }
-
-      if $params['gid'] {
-        $gid = "skgid ${params['gid']}"
-      } else {
-        $gid = ''
-      }
-
-      if $params['goto'] {
-        $goto = "goto ${params['goto']}"
-      } else {
-        $goto = ''
-      }
-
-      $all_content = [
-        $saddr, $daddr, $type_mgmt, $ctdir, $proto, $sport, $dport, $uid,
-        $gid, $log_prefix, $clamp_mss, $cluster_conf, $connlimit_upto,
-        $connlimit_above, $conntrack, $ctstatus, $filter_start_time,
-        $filter_stop_time, $gateway, $goto, $action, $cgroup
-      ]
-
-      $content = ($all_content.filter |$parameter| {
-        ! $parameter.empty()
-      }).join(' ')
 
       $filtered_params = {
         'ensure'  => $params['ensure'],

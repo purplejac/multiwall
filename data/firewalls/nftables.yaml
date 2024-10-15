@@ -1,3 +1,100 @@
 ---
-multiwall:nftables:dport: "dport %{params.dport}"
-multiwall:nftables:burst: "limit rate ${params['burst']}/second burst 1"
+# 
+# nftables rule translations
+# 
+multiwall::nftables::rule::all_protocols: '{ icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp }'
+
+multiwall::nftables::rule::ctdirections:
+  reply: 'ip daddr %{facts.networking.ip}'
+  REPLY: "%{lookup('multiwall::nftables::rule::directions.reply')}"
+  original: 'ip saddr %{facts.networking.ip}'
+  ORIGINAL: "%{lookup('multiwall::nftables::rule::directions.original}"
+
+multiwall::nftables::rule::jump_commands:
+  accept: 'accept'
+  reject: 'reject'
+  drop: 'drop'
+  queue: 'queue'
+  return: 'return'
+  dnat: 'dnat %{params["todest"]}'
+  snat: 'snat %{params["tosource"]}'
+  log: '%{log_prefix}'
+  netmap: 'netmap to %{params["to"]}'
+  masquerade: 'masquerade'
+  redirect: 'redirect %{params["toports"]}'
+  mark: 'meta mark set %{params["connmark"]}'
+  ct: 'ct state %{params["ctstate"]}'
+
+multiwall::nftables::rule::param_list:
+  - saddr
+  - daddr
+  - type_mgmt
+  - ctdir
+  - proto
+  - sport
+  - dport
+  - uid
+  - gid
+  - log_prefix
+  - clamp_mss
+  - cluster_conf
+  - connlimit_upto
+  - connlimit_above
+  - conntrack
+  - ctstatus
+  - filter_start_time
+  - filter_stop_time
+  - gateway
+  - goto
+  - action
+  - cgroup
+  
+#
+# There is no direct burst parameter for nftables, instead we'll mimick by implementing by setting the rate
+# limit to 'bursts per second' and a max of one packet allowed to exceed.
+#
+multiwall::nftables:rule::burst: 'limit rate %{param_value}/second burst 1'
+
+multiwall::nftables::rule::jump: "%{jump_action}"
+multiwall::nftables::rule::cgroup: 'meta nfproto cgroupv2 cgroup %{param_value}'
+multiwall::nftables::rule::connlimit_mask: 'ip saddr & %{netmask}'
+multiwall::nftables::rule::src_range: '%{lookup("multiwall::nftables::rule::src_range")}'
+multiwall::nftables::rule::source: 'ip saddr %{source}'
+multiwall::nftables::rule::dst_range: "%{lookup('multiwall::nftables::rule::dst_range')}"
+multiwall::nftables::rule::destination: 'ip saddr %{destination}'
+multiwall:nftables:sport: "dport %{param_value}"
+multiwall:nftables:dport: "dport %{param_value}"
+
+#
+# https://wiki.nftables.org/wiki-nftables/index.php/Mangling_packet_headers outlines this as the appropriate approach to
+# clamp MSS to PMTU
+#
+multiwall::nftables::rule::clamp_mss_to_pmtu: 'tcp option size set rt mtu'
+
+#
+# Mimicking cluster flag from iptables, for nftables, according to the suggestion outlined by RH using iptables-translate here:
+# https://access.redhat.com/solutions/7033787 - deliberately not checking if all three values exist, to provoke a failure if
+# one of the required parameters is not set - implemented according to available firewall settings and considering all other
+# clusterip params deprecated as per the KB
+#
+multiwall::nftables::rule::clusterip_hash_init: 'jhash ct original saddr mod %{params_val} seed %{params.clusterip_hash_init} eq %{params.clusterip_local_node} meta pkttype set host counter'
+
+#
+# Mimicking ctdir from iptables by converting to management of ct states established,related and using the ctdir setting to
+# decide whether to set saddr or daddr. If direction is not set correctly, will fall back to localhost target.
+#
+multiwall::nftables::rule::ctdir: "%{ct_direction} ct state established,related"
+
+multiwall::nftables::rule::connlimit_above: "ct count over %{param_value}"
+multiwall::nftables::rule::connlimit_upto: "ct count under %{param_value}"
+multiwall::nftables::rule::proto_no_src_dst: "ip protocol %{set_proto}"
+multiwall::nftables::rule::proto_src_dst: "%{set_proto}"
+multiwall::nftables::rule::ct_status: "ct status %{fmt_ct_status}"
+multiwall::nftables::rule::date_start: "meta time >= %{epoch}"
+multiwall::nftables::rule::date_stop: "meta time <= %{epoch}"
+multiwall::nftables::rule::dst_type: "%{formatted_types}"
+multiwall::nftables::rule::src_type: "%{formatted_types}"
+multiwall::nftables::rule::gateway: "dup to %{param_value}"
+multiwall::nftables::rule::uid: "skuid ${param_value}:"
+multiwall::nftables::rule::gid: "skgid ${param_value}:"
+multiwall::nftables::rule::goto: "goto ${param_value}"
