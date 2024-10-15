@@ -181,6 +181,26 @@ define multiwall::nftables::rule (
             }
           } elsif $parameter in ['date_start', 'date_stop'] {
             $epoch_date = multiwall::time_to_epoch(params[$parameter])
+          } elsif $parameter =~ /hashlimit/ {
+            #
+            # For simplicity and functionality, hashlimit is only applied on the hashlimit_name
+            # as it is always required for a hashlimit.
+            #
+            # The range of hashlimit_htable parameters are ignored in this implementation as 
+            # nftables automatically manages the menory allocations around the hash table implementation,
+            # so there is no true translation for those parameters.
+            #
+            # hashlimit_dstmask and srcmask also do not have direct implementations in nftables
+            # as it relies on defined sets or groups to achieve similar functionality. As a result
+            # the parameters are left unimplemented, though if set, compilation will fail with an 
+            # error to ensure awareness of the change.
+            #
+            if $parameter != /hashlimit_name/ {
+              $hashlimit = multiwall::nftables::rule::hashlimit_rule_construct($params)
+              "${body} ${hashlimit}"
+            } else {
+              $body
+            }
           }
 
           if $parameter == 'conntrack' {

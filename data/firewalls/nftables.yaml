@@ -26,26 +26,36 @@ multiwall::nftables::rule::jump_commands:
   ct: 'ct state %{params["ctstate"]}'
 
 multiwall::nftables::rule::param_list:
+  - iniface
+  - outiface
   - saddr
+  - connlimit_mask
+  - source
+  - src_range
   - daddr
+  - destination
+  - dst_range
   - type_mgmt
   - ctdir
   - proto
   - sport
   - dport
+  - icmp
   - uid
   - gid
   - log_prefix
-  - clamp_mss
-  - cluster_conf
-  - connlimit_upto
-  - connlimit_above
+  - clamp_mss_to_pmtu
+  - cluster_ip_hash_init
   - conntrack
+  - connlimit_above
+  - connlimit_upto
   - ctstatus
-  - filter_start_time
-  - filter_stop_time
+  - date_start
+  - date_stop
   - gateway
   - goto
+  - ipsec_dir
+  - hop_limit
   - action
   - cgroup
   
@@ -92,9 +102,18 @@ multiwall::nftables::rule::proto_src_dst: "%{set_proto}"
 multiwall::nftables::rule::ct_status: "ct status %{fmt_ct_status}"
 multiwall::nftables::rule::date_start: "meta time >= %{epoch}"
 multiwall::nftables::rule::date_stop: "meta time <= %{epoch}"
-multiwall::nftables::rule::dst_type: "%{formatted_types}"
-multiwall::nftables::rule::src_type: "%{formatted_types}"
 multiwall::nftables::rule::gateway: "dup to %{param_value}"
-multiwall::nftables::rule::uid: "skuid ${param_value}:"
-multiwall::nftables::rule::gid: "skgid ${param_value}:"
-multiwall::nftables::rule::goto: "goto ${param_value}"
+multiwall::nftables::rule::uid: "skuid %{param_value}:"
+multiwall::nftables::rule::gid: "skgid %{param_value}:"
+multiwall::nftables::rule::goto: "goto %{param_value}"
+
+# hop_limit in the firewall module was intended for ip6 only, using the header field.
+# could potentially look at mimicking with a TTL decrease of some sorts for ipv4, but
+# currently am opting for just copying the ipv6 implementation.
+multiwall::nftables::rule::hop_limit: "ip6 hoplimit lt %{param_value}"
+
+multiwall::nftables::rule::icmp: "icmp type %{param_value}"
+multiwall::nftables::rule::iniface: "iifname %{param_value}"
+multiwall::nftables::rule::ipsec_dir: 'ipsec policy %{parameter_value}'
+multiwall::nftables::rule::outiface: "oifname %{param_value}"
+
