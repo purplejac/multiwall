@@ -989,7 +989,8 @@ define multiwall::rule (
   Optional[String[1]]                                                                                                                                                                             $chain = undef,
   Enum['nat', 'mangle', 'filter', 'raw', 'rawpost', 'broute', 'security']                                                                                                                         $table = 'filter',
   Enum['iptables', 'nftables']                                                                                                                                                                    $target_firewall = lookup('multiwall::target_firewall', { default_value => 'nftables' }),
-  Enum['iptables', 'ip6tables', 'IPv4', 'IPv6', 'inet']                                                                                                                                           $protocol = $target_firewall ? { 'nftables' => 'inet', 'iptables' => 'IPv4' , default => 'inet' },
+  Enum['iptables', 'ip6tables', 'IPv4', 'IPv6']                                                                                                                                                   $protocol,
+  String                                                                                                                                                                                          $family = 'inet'
   Optional[Enum['accept','reject','drop']]                                                                                                                                                        $action = undef,
   Optional[String]                                                                                                                                                                                $jump   = if $action { $action.upcase() } else { $action },
   Optional[Integer[1]]                                                                                                                                                                            $burst = undef,
@@ -1065,7 +1066,7 @@ define multiwall::rule (
   Optional[Boolean]                                                                                                                                                                               $islastfrag = undef,
   Optional[Boolean]                                                                                                                                                                               $kernel_timezone = undef,
   Optional[Pattern[/^([0-9]+)(:)?([0-9]+)?$/]]                                                                                                                                                    $length = undef,
-  Optional[Pattern[/^\d+\/(?:sec(?:ond)?|min(?:ute)?|hour|day)$/]]                                                                                                                                $limit = undef,
+  Optional[String]                                                                                                                                                                                $limit = undef,
   Optional[String[1]]                                                                                                                                                                             $line = undef,
   Optional[Boolean]                                                                                                                                                                               $log_ip_options = undef,
   Optional[Variant[Integer[0,7], String[1]]]                                                                                                                                                      $log_level = undef,
@@ -1141,22 +1142,12 @@ define multiwall::rule (
   Optional[Variant[Enum['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], Array[Enum['Mon','Tue','Wed','Thu','Fri','Sat','Sun']]]]                                                                      $week_days = undef,
   Optional[Integer]                                                                                                                                                                               $zone = undef,
 ) {
-  #
-  # nftables defaults rule creation to the unified 'inet' table which should be targetable for non-iptables rules,
-  # so we check for it and assume a fall-back to IPv4 for iptables, if the provided protocol is inet.
-  #
-  if $target_firewall == 'iptables' and $protocol == 'inet' {
-    $fix_proto = 'IPv4'
-  } else {
-    $fix_proto = $protocol
-  }
-
   #lint:endignore
-  $firewall_params = {
+  $tmp_firewall_params = {
     'ensure' => $ensure,
     'chain' => $chain,
     'table' => $table,
-    'protocol' => $fix_proto,
+    'protocol' => $protocol,
     'clusterip_clustermac' => $clusterip_clustermac,
     'jump' => $jump,
     'burst' => $burst,
@@ -1298,6 +1289,12 @@ define multiwall::rule (
     'zone' => $zone,
   }.filter |$key, $value| {
     $value
+  }
+
+  if  $target_firewall != 'iptables' {
+    $firewall_params = $tmp_firewall_params + {'family' => $family}
+  } else {
+    $firewall_params = $tmp_firewall_params
   }
 
   #
