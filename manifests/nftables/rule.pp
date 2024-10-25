@@ -31,6 +31,12 @@
 #   Defines the offset value under which no recalculation is performed
 #   for the priorities
 #
+# @param unsupported [Array]
+#   List of unsupported parameters, normally sourced from hiera.
+#   These parameters will not be converted in the current setup, but could be
+#   in the future, either through this module or through removal from the unsupported
+#   list and the corresponding addition of the rule in hiera.
+#
 define multiwall::nftables::rule (
   Hash $params,
   Array $param_list,
@@ -38,7 +44,7 @@ define multiwall::nftables::rule (
   Integer $low_offset = 10,
   Integer $mid_val = 50,
   Integer $min_point = $mid_val - 20,
-  Array $unsupported = ['clusterip_hash_init', 'clusterip_total_node', 'clusterip_local_node'],
+  Array $unsupported = [],
 ) {
   $sanitised_params = multiwall::validate_nf_params($params, $unsupported)
 
@@ -89,7 +95,7 @@ define multiwall::nftables::rule (
   # To manage conntrack protocol overriding 'standard' protocol definition, it is set ahead
   # of reading the actual protocol settings through the params loop
   #
-  if 'ctproto' in $sanitised_params and ('ctorigdstport' in $sanitised_params or ctorigsrcport in $sanitised_params]) {
+  if 'ctproto' in $sanitised_params and ('ctorigdstport' in $sanitised_params or ctorigsrcport in $sanitised_params) {
     $set_proto = $sanitised_params['ctproto']
   } elsif 'proto' in $sanitised_params {
     if $sanitised_params['proto'] == 'all' {
@@ -130,6 +136,13 @@ define multiwall::nftables::rule (
           "${body} ${hashlimit}"
         } else {
           $body
+        }
+      } elsif $parameter =~ 'rpfilter' and $param_value == 'accept-local' {
+        nftables::simplerule { 'rpfilter_accept_local':
+          action  => 'accept',
+          daddr   => '127.0.0.1',
+          comment => 'Allow local traffic as part of rpf config',
+          before  => Nftales::Rule[$sanitised_name],
         }
       }
 

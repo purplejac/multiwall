@@ -9,6 +9,16 @@
 #
 # So they are all added to the unsupported list.
 #
+# GeoIP matching also requires a bit of additional work, so is being pushed a bit down the track
+# https://wiki.nftables.org/wiki-nftables/index.php/GeoIP_matching
+#
+# Looking to implement string matching, but need to have a think about the best approach, so leaving it
+# unsupported for the first run-through here.
+#
+# time_contiguous has been deprecated from newer versions of iptables, so leaving unsupported for now.
+#
+# u32 is not really a fixture in nftables, should look to 'raw' instead
+#
 multiwall::nftables::rule::unsupported:
   - 'bytecode'
   - 'checksum_fill'
@@ -28,7 +38,18 @@ multiwall::nftables::rule::unsupported:
   - 'recent'
   - 'rhitcount'
   - 'rname'
-
+  - 'rseconds'
+  - 'rsource'
+  - 'rttl'
+  - 'src_cc'
+  - 'string'
+  - 'string_algo'
+  - 'string_from'
+  - 'string_hex'
+  - 'string_to'
+  - 'time_contiguous'
+  - 'u32'
+  - 'zone'
 
 # 
 # nftables rule translations
@@ -71,6 +92,9 @@ multiwall::nftables::rule::param_list:
   - proto
   - sport
   - dport
+  - tcp_flags
+  - set_dscp
+  - set_dscp_class
   - clamp_mss_to_pmtu
   - mss
   - src_type
@@ -95,11 +119,21 @@ multiwall::nftables::rule::param_list:
   - gid
   - ipsec_dir
   - cgroup
+  - stat_mode_random
+  - stat_probability
+  - time_start
+  - time_stop
+  - week_days
   - iniface
   - outiface
   - pkttype
   - type_cast_src
   - type_cast_dst
+  - rpfilter
+  - socket
+  - stat_mode_nth
+  - stat_every
+  - stat_packet
   - log_prefix
   - log_ip_options
   - log_level
@@ -207,11 +241,8 @@ multiwall::nftables::rule::log_prefix: "log prefix %{param_value}"
 # Unified parameters for tcp options and sequence
 multiwall::nftables::rule::log_tcp: "log flags tcp options %{param_value}"
 multiwall::nftables::rule::log_uid: "log flags skuid"
-
-
-multiwall::nftables::rule::type_cast_src: "fib saddr type %{param_value}"
-multiwall::nftables::rule::type_cast_dst: "fib daddr type %{param_value}"
-mutiwall::nftables::rule::type_unreachable: "icmp type %{param_value} icmp code 1"
+multiwall::nftables::rule::src_type: "fib saddr type %{param_value} counter"
+multiwall::nftables::rule::dst_type: "fib daddr type %{param_value} counter"
 multiwall::nftables::rule::mac_source: "ether saddr %{param_value}"
 multiwall::nftables::rule::match_mark: "ct mark %{param_value}"
 multiwall::nftables::rule::nflog_group: "log group %{param_value}"
@@ -225,3 +256,22 @@ multiwall::nftabhles::rule::queue_config: "queue %{param_value}"
 multiwall::nftables::rule::random: "masquerade random"
 multiwall::nftables::rule::random_fully: "masquerade fully-random"
 multiwall::nftables::rule::reject: "reject with %{param_value}"
+multiwall::nftables::rule::rpfilter: "fib saddr %{param_value}"
+multiwall::nftables::rule::set_dscp: "ip dscp set %{param_value}"
+multiwall::nftables::rule::set_dscp_class: "ip dscp set %{param_value}"
+multiwall::nftables::rule::set_mark: "ct mark set %{param_value}"
+multiwall::nftables::rule::set_mss: 'flags syn tcp option maxseg size set %{param_value}'
+multiwall::nftables::rule::socket: "socket transparent %{param_value}"
+multiwall::nftables::rule::stat_mode_nth: 'numgen inc'
+multiwall::nftables::rule::stat_mode_random: 'meta random'
+multiwall::nftables::rule::stat_every: "mod %{param_value}"
+multiwall::nftables::rule::stat_packet: "%{param_value} counter"
+multiwall::nftables::rule::stat_probability: "& %{param_value} counter"
+multiwall::nftables::rule::tcp_flags: "tcp flags %{param_value} counter"
+# May require some further investigation for negations
+multiwall::nftables::rule::tcp_option: "tcp option %{param_value}"
+# Could, and maybe should, be joined into a single parameter, but for now, keeping them separate so they could be
+# overwritten if someone comes up with a different solution here.
+multiwall::nftables::rule::time_start: 'meta hour "%{param_value}"'
+multiwall::nftables::rule::time_stop: '-"%{param_value}"'
+multiwall::nftables::rule::week_days: "meta day %{param_value} counter"

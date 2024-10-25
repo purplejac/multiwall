@@ -649,6 +649,9 @@
 #
 #   Default Value: 'nftables'
 #
+# @param family
+#   Primarily for use with nftables. Decides which family of tables to use. Defaults to inet.
+#
 # @param queue_bypass
 #   Allow packets to bypass :queue_num if userspace process is not listening
 #
@@ -985,12 +988,12 @@
 #   Assign this packet to zone id and only have lookups done in that zone.
 #
 define multiwall::rule (
+  Enum['iptables', 'ip6tables', 'IPv4', 'IPv6']                                                                                                                                                   $protocol,
   Enum[present, absent, 'present', 'absent']                                                                                                                                                      $ensure = 'present',
   Optional[String[1]]                                                                                                                                                                             $chain = undef,
   Enum['nat', 'mangle', 'filter', 'raw', 'rawpost', 'broute', 'security']                                                                                                                         $table = 'filter',
   Enum['iptables', 'nftables']                                                                                                                                                                    $target_firewall = lookup('multiwall::target_firewall', { default_value => 'nftables' }),
-  Enum['iptables', 'ip6tables', 'IPv4', 'IPv6']                                                                                                                                                   $protocol,
-  String                                                                                                                                                                                          $family = 'inet'
+  String                                                                                                                                                                                          $family = 'inet',
   Optional[Enum['accept','reject','drop']]                                                                                                                                                        $action = undef,
   Optional[String]                                                                                                                                                                                $jump   = if $action { $action.upcase() } else { $action },
   Optional[Integer[1]]                                                                                                                                                                            $burst = undef,
@@ -1292,7 +1295,7 @@ define multiwall::rule (
   }
 
   if  $target_firewall != 'iptables' {
-    $firewall_params = $tmp_firewall_params + {'family' => $family}
+    $firewall_params = $tmp_firewall_params + { 'family' => $family }
   } else {
     $firewall_params = $tmp_firewall_params
   }
