@@ -21,8 +21,8 @@ Puppet::Functions.create_function(:'multiwall::hashlimit_rule_construct') do
     mode_map = [
       [ 'srcport', "#{params['proto']} sport"],
       [ 'dstport', "#{params['proto']} dport"],
-      ['srcip', 'ip saddr'],
-      ['dstip', 'ip daddr'],
+      ['srcip', 'saddr'],
+      ['dstip', 'daddr'],
     ]
 
     hashlimit_rule = []

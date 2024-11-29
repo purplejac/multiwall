@@ -50,17 +50,17 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
           clusterip_keys.each do |param_name|
             raise ArgumentError, "ClusterIP parameters missing matching values for #{parameter}" if param_name.nil?
           end
-        elsif parameter == 'ctdir' && (!params['source'].nil? || !params['destination'].nil?)
-          raise ArgumentError, 'ctdir auto-sets source/destination values for nftables to match direction. Source/Destination parameters should be unset'
-        elsif ctorig_port_keys.include?(parameter) && (!params['proto']) && (!params['ctproto'])
-          raise ArgumentError, 'The ctorig port parameter requires that the corresponding protocol is defined with the "proto" parameter.'
+#        elsif parameter == 'ctdir' && (!params['source'].nil? || !params['destination'].nil?)
+#          raise ArgumentError, 'ctdir auto-sets source/destination values for nftables to match direction. Source/Destination parameters should be unset'
+#        elsif ctorig_port_keys.include?(parameter) && (!params['proto']) && (!params['ctproto'])
+#          raise ArgumentError, 'The ctorig port parameter requires that the corresponding protocol is defined with the "proto" parameter.'
         end
 
         case parameter
         when 'protocol'
           # Translate the protocol parameter into the protocol command to use with nftables 'matches'
           fixed_param_name = parameter
-          fixed_value = value.include('6') ? 'ip6' : 'ip'
+          fixed_value = value.include?('6') ? 'ip6' : 'ip'
 
         when 'jump'
           fixed_param_name = parameter

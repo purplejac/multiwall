@@ -56,28 +56,24 @@ multiwall::nftables::rule::unsupported:
 # 
 multiwall::nftables::rule::all_protocols: '{ icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp }'
 
-multiwall::nftables::rule::ctdirections:
-  reply: "%{protocol} daddr %{facts.networking.ip}"
-  REPLY: "%{lookup('multiwall::nftables::rule::directions.reply')}"
-  original: "%{protocol} saddr %{facts.networking.ip}"
-  ORIGINAL: "%{lookup('multiwall::nftables::rule::directions.original}"
-
 multiwall::nftables::rule::jump_commands:
   accept: 'accept'
   reject: 'reject'
   drop: 'drop'
   queue: 'queue'
   return: 'return'
-  dnat: 'dnat %{params["todest"]}'
-  snat: 'snat %{params["tosource"]}'
+  dnat: 'dnat %{params.todest}'
+  snat: 'snat %{params.tosource}'
   log: '%{log_prefix}'
-  netmap: 'netmap to %{params["to"]}'
+  netmap: 'netmap to %{params.to}'
   masquerade: 'masquerade'
-  redirect: 'redirect %{params["toports"]}'
-  mark: 'meta mark set %{params["connmark"]}'
-  ct: 'ct state %{params["ctstate"]}'
+  redirect: 'redirect %{params.toports}'
+  mark: 'meta mark set %{params.connmark}'
+  ct: 'ct state %{params.ctstate}'
 
 multiwall::nftables::rule::param_list:
+  - iniface
+  - outiface
   - saddr
   - connlimit_mask
   - source
@@ -107,6 +103,10 @@ multiwall::nftables::rule::param_list:
   - ishasmorefrags
   - islastfrag
   - ctdir
+  - ctorigdst
+  - ctorigsrc
+  - ctorigdstport
+  - ctorigsrcport
   - conntrack
   - connlimit_above
   - connlimit_upto
@@ -124,8 +124,6 @@ multiwall::nftables::rule::param_list:
   - time_start
   - time_stop
   - week_days
-  - iniface
-  - outiface
   - pkttype
   - type_cast_src
   - type_cast_dst
@@ -144,8 +142,8 @@ multiwall::nftables::rule::param_list:
   - nflog_snaplen
   - limit
   - burst
+  - jump
   - action
-  - reject
   - goto
   - random
   - fully-random
@@ -158,13 +156,13 @@ multiwall::nftables::rule::param_list:
 #
 multiwall::nftables:rule::burst: 'burst %{param_value}'
 
-multiwall::nftables::rule::jump: "%{jump_action}"
+multiwall::nftables::rule::jump: "%{lookup(multiwall::nftables::jump_commands)}"
 multiwall::nftables::rule::cgroup: 'meta nfproto cgroupv2 cgroup %{param_value}'
-multiwall::nftables::rule::connlimit_mask: "%{protocol} saddr & %{netmask}"
+multiwall::nftables::rule::connlimit_mask: "saddr & %{netmask}"
 multiwall::nftables::rule::src_range: '%{lookup("multiwall::nftables::rule::src_range")}'
-multiwall::nftables::rule::source: "%{protocol} saddr %{param_value}"
+multiwall::nftables::rule::source: "saddr %{param_value}"
 multiwall::nftables::rule::dst_range: "%{lookup('multiwall::nftables::rule::dst_range')}"
-multiwall::nftables::rule::destination: "%{protocol} saddr %{param_value}"
+multiwall::nftables::rule::destination: "daddr %{param_value}"
 multiwall:nftables:sport: "dport %{param_value}"
 multiwall:nftables:dport: "dport %{param_value}"
 
@@ -183,16 +181,18 @@ multiwall::nftables::rule::mss: "option maxseg size %{param_value}"
 #
 multiwall::nftables::rule::clusterip_hash_init: 'jhash ct original saddr mod %{params_val} seed %{params.clusterip_hash_init} eq %{params.clusterip_local_node} meta pkttype set host counter'
 
-#
-# Mimicking ctdir from iptables by converting to management of ct states established,related and using the ctdir setting to
-# decide whether to set saddr or daddr. If direction is not set correctly, will fall back to localhost target.
-#
-multiwall::nftables::rule::ctdir: "%{ct_direction} ct state established,related"
+multiwall::nftables::rule::ctdir: "ct direction %{param_value}"
+
+multiwall::nftables::rule::ctorigdst: "ct original daddr %{param_value}"
+multiwall::nftables::rule::ctorigsrc: "ct original saddr %{param_value}"
+
+multiwall::nftables::rule::ctorigdstport: "ct original proto-dst %{param_value}"
+multiwall::nftables::rule::ctorigsrcport: "ct original proto-src %{param_value}"
 
 multiwall::nftables::rule::connlimit_above: "ct count over %{param_value}"
 multiwall::nftables::rule::connlimit_upto: "ct count under %{param_value}"
 multiwall::nftables::rule::proto_no_src_dst: "ip protocol %{set_proto}"
-multiwall::nftables::rule::proto_src_dst: "%{set_proto}"
+multiwall::nftables::rule::proto_src_dst: "ip protocol %{set_proto}"
 multiwall::nftables::rule::ct_status: "ct status %{fmt_ct_status}"
 multiwall::nftables::rule::date_start: "meta time >= %{param_value}"
 multiwall::nftables::rule::date_stop: "meta time <= %{param_value}"
@@ -207,14 +207,15 @@ multiwall::nftables::rule::goto: "goto %{param_value}"
 multiwall::nftables::rule::hop_limit: "%{family} hoplimit lt %{param_value}"
 
 multiwall::nftables::rule::icmp: "icmp type %{param_value}"
-multiwall::nftables::rule::iniface: "metaiifname %{param_value}"
-multiwall::nftables::rule::ipsec_dir: 'ipsec policy %{parameter_value}'
+multiwall::nftables::rule::iniface: "iifname %{param_value}"
 multiwall::nftables::rule::outiface: "oifname %{param_value}"
+multiwall::nftables::rule::ipsec_dir: 'ipsec policy %{parameter_value}'
+
 
 # IPSET Management to be implemented later. Probably through a fact to read ipset output, for any nodes where sets 
 # are already defined, and then migrating them to nftables sets before trying to manage them.
 # For now, it assumes that the corresponding set has been migrated to nftables already.
-multiwall::nftables::rule::ipset: "ip saddr @%{param_value}"
+multiwall::nftables::rule::ipset: "saddr @%{param_value}"
 
 # Ignoring ipvs
 
@@ -257,8 +258,8 @@ multiwall::nftables::rule::random: "masquerade random"
 multiwall::nftables::rule::random_fully: "masquerade fully-random"
 multiwall::nftables::rule::reject: "reject with %{param_value}"
 multiwall::nftables::rule::rpfilter: "fib saddr %{param_value}"
-multiwall::nftables::rule::set_dscp: "ip dscp set %{param_value}"
-multiwall::nftables::rule::set_dscp_class: "ip dscp set %{param_value}"
+multiwall::nftables::rule::set_dscp: "dscp set %{param_value}"
+multiwall::nftables::rule::set_dscp_class: "dscp set %{param_value}"
 multiwall::nftables::rule::set_mark: "ct mark set %{param_value}"
 multiwall::nftables::rule::set_mss: 'flags syn tcp option maxseg size set %{param_value}'
 multiwall::nftables::rule::socket: "socket transparent %{param_value}"

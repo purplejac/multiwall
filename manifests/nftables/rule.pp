@@ -39,12 +39,12 @@
 #
 define multiwall::nftables::rule (
   Hash $params,
-  Array $param_list,
-  Integer $high_offset = 20,
-  Integer $low_offset = 10,
-  Integer $mid_val = 50,
-  Integer $min_point = $mid_val - 20,
-  Array $unsupported = [],
+  Array $param_list    = lookup("multiwall::nftables::rule::param_list"),
+  Integer $high_offset = lookup("multiwall::nftables::rule::high_offset", { "default_value" => 20 }),
+  Integer $low_offset  = lookup("multiwall::nftables::rule::low_offset", { "default_value" => 10 }),
+  Integer $mid_val     = lookup("multiwall::nftables::rule::mid_val", { "default_value" => 50 }),
+  Integer $min_point   = lookup("multiwall::nftables::rule::min_point", { "default_value" => $mid_val - 20 }),
+  Array $unsupported   = lookup("multiwall::nftables::rule::unsupported", { "default_value" => [] }),
 ) {
   $sanitised_params = multiwall::validate_nf_params($params, $unsupported)
 
@@ -78,6 +78,8 @@ define multiwall::nftables::rule (
     $chain = 'INPUT'
   }
 
+  $protocol = $sanitised_params['protocol'] ? { default => 'ip', 'iptables6' => 'ip6', 'IPv6' => 'ip6'}
+
   $sanitised_name = ([$chain] + [(($name.split(/[ |-]/) - $num_string)).join('_')]).join('-').regsubst(/[\.|\/]/,'_', 'G')
   $family = $sanitised_params['family']
 
@@ -106,17 +108,28 @@ define multiwall::nftables::rule (
   }
 
   $content = $param_list.reduce('') |$body, $parameter| {
-    if $parameter in $sanitised_params {
-      $param_value = $sanitised_params[$parameter]
+    if $parameter =~ /ifname/ {
+      $ifrule = lookup("multiwall::nftables::rule::${parameter}")
+      $body_set = "${ifrule} ${body}"
+    } else {
+      $body_set = $body ? { default => $body, '' => $protocol }
+    }
 
-      if $parameter == 'ctdir' {
-        $ct_direction = lookup("multiwall::nftables::rule::ctdirections.${param_value}")
-      } elsif $parameter in ['proto', 'ctproto'] {
+    if $parameter in $sanitised_params {
+      $param_value = $sanitised_params[$parameter].downcase()
+
+#      if $parameter == 'ctdir' {
+#        $direction_hash = lookup("multiwall::nftables::rule::ctdirections")  #${param_value.downcase()}")
+#        $ct_direction = $direction_hash[$param_value.downcase()]
+#      } elsif $parameter in ['proto', 'ctproto'] {
+      if $parameter in ['proto', 'ctproto'] {
         if 'source' in $sanitised_params and 'destination' in $sanitised_params {
-          $proto_param = lookup('multiwall::nftables::rule::proto_no_src_dst')
+          $param_rule = lookup('multiwall::nftables::rule::proto_src_dst')
         } else {
-          $proto_param = lookup('multiwall::nftables::rule::proto_src_dst')
+          $param_rule = lookup('multiwall::nftables::rule::proto_no_src_dst')
         }
+
+        "${body_set} ${param_rule}"
       } elsif $parameter =~ /hashlimit/ {
         #
         # For simplicity and functionality, hashlimit is only applied on the hashlimit_name
@@ -133,9 +146,9 @@ define multiwall::nftables::rule (
         #
         if $parameter != /hashlimit_name/ {
           $hashlimit = multiwall::nftables::rule::hashlimit_rule_construct($sanitised_params)
-          "${body} ${hashlimit}"
+          "${body_set} ${hashlimit}"
         } else {
-          $body
+          $body_set
         }
       } elsif $parameter =~ 'rpfilter' and $param_value == 'accept-local' {
         nftables::simplerule { 'rpfilter_accept_local':
@@ -144,9 +157,7 @@ define multiwall::nftables::rule (
           comment => 'Allow local traffic as part of rpf config',
           before  => Nftales::Rule[$sanitised_name],
         }
-      }
-
-      if $parameter == 'conntrack' {
+      } elsif $parameter == 'conntrack' {
         # There are several potential permutations of the conntract traffic management,
         # while some are more likely than others, it made sense to support them all and
         # trust the users.
@@ -154,13 +165,27 @@ define multiwall::nftables::rule (
         # the setup_ct_rule function, which will return a properly formatted string
         # of the relevant conttrack parameters
         #
-        "${body} ${multiwall::setup_ct_rules($sanitised_params)}"
+        if $body_set == 'ip' {
+          multiwall::setup_ct_rules($sanitised_params)
+        } else {
+          "${body_set} ${multiwall::setup_ct_rules($sanitised_params)}"
+        }
+      } elsif $parameter == 'jump' {
+        $param_rule = lookup("multiwall::nftables::rule::jump_commands.${param_value}")
+        "${body_set} ${param_rule}"
       } else {
         $param_rule = lookup("multiwall::nftables::rule::${parameter}")
-        "${body} ${param_rule}"
+
+        if $parameter =~ /^ct/ and $body_set == 'ip' {
+          $param_rule
+        } elsif $parameter =~ /ifname/ {
+          $body_set
+        } else {
+          "${body_set} ${param_rule}"
+        }
       }
     } else {
-      $body
+      $body_set
     }
   }
 

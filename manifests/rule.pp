@@ -988,7 +988,7 @@
 #   Assign this packet to zone id and only have lookups done in that zone.
 #
 define multiwall::rule (
-  Enum['iptables', 'ip6tables', 'IPv4', 'IPv6']                                                                                                                                                   $protocol,
+  Enum['iptables', 'ip6tables', 'IPv4', 'IPv6']                                                                                                                                                   $protocol = 'IPv4',
   Enum[present, absent, 'present', 'absent']                                                                                                                                                      $ensure = 'present',
   Optional[String[1]]                                                                                                                                                                             $chain = undef,
   Enum['nat', 'mangle', 'filter', 'raw', 'rawpost', 'broute', 'security']                                                                                                                         $table = 'filter',
