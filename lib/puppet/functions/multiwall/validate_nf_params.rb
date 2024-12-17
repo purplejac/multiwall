@@ -17,14 +17,13 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
     # Check for clashing parameters and raise an error if any are encountered
     #
     [
-      ['source', 'src_range'],
-      ['destination', 'dst_range'],
       ['state', 'ctstate'],
       ['ctstate', 'ctdir'],
       ['log_prefix', 'nflog_prefix'],
       ['random', 'fully-random'],
       ['action', 'reject', 'goto', 'random', 'random_fully', 'queue_bypass', 'queue_num'],
       ['to', 'todest'],
+      ['connlimit_upto', 'connlimit_above']
     ].each do |param_set|
       set_count = []
       param_set.each do |chk_param|
@@ -72,11 +71,19 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
 
         when 'ctstatus'
           fixed_param_name = parameter
-          fixed_value = parameter.is_a?(Array) ? parameter.join(',').downcase : parameter.downcase
+          fixed_value = value.is_a?(Array) ? value.join(',').downcase : value.downcase
 
         when %r{date_.*}
           fixed_param_name = parameter
           fixed_value = DateTime.parse(value).strftime('%s')
+
+        when 'connlimit_upto'
+          fixed_param_name = parameter
+          fixed_value = params.include?('connlimit_mask') ? "{ ip saddr and #{call_function('multiwall::cidr2netmask', params['connlimit_mask'])} ct count #{value} }" : "{ip saddr ct count #{value} }"
+        
+        when 'connlimit_above'
+          fixed_param_name = parameter
+          fixed_value = params.include?('connlimit_mask') ? "{ ip saddr and #{call_function('multiwall::cidr2netmask', params['connlimit_mask'])} ct count over #{value} }" : "{ip saddr ct count over #{value} }"
 
         when %r{(source|destination|(src|dst)_range)}
           # These parameters have already been checked against clashes, but are all defined with their corresponding
@@ -84,6 +91,10 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
           # parameter was used.
           fixed_param_name = parameter.match?(%r{(source|src_.*)}) ? 'source' : 'destination'
           fixed_value = value
+
+        when %r{(out|in)iface}
+          fixed_param_name = parameter
+          fixed_value = value.gsub('! ', '!= ')
 
         when 'log_level'
           log_levels = {

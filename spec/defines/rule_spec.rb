@@ -37,13 +37,12 @@ describe 'multiwall::rule' do
           is_expected.to contain_multiwall__rule(params['name']).with_name(params['name'])
 
           if os_check
-            pp catalogue.resources
             is_expected.to contain_multiwall__nftables__rule(params['name']).with_name(params['name'])
             is_expected.to contain_nftables__rule('INPUT-reject_local_traffic_not_on_loopback_interface').with(
               'ensure' => params['ensure'],
               'table' => 'inet-filter',
               'order' => '03',
-              'content' => "ip daddr #{params['destination']} all metaiifname #{params['iniface']} #{params['jump']}",
+              'content' => "ip daddr #{params['destination']} ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } meta iifname != lo #{params['jump']}",
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
@@ -102,7 +101,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-connlimit_rule').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => %r{ip saddr & 255.255.255.0 ct count over 3 metaiifname eth0 reject},
+              'content' => 'meta iifname eth0 ct state new add @ip4dynamic { ip saddr and 255.255.255.0 ct count over 3 } reject',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name']).with_name(params['name'])
@@ -238,7 +237,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('POSTROUTING-ctorigdstport_to_8888_and_masq').with(
               'ensure' => 'present',
               'table' => "ip-#{params['table']}",
-              'content' => "ip tcp ct original proto-dst 8888 masquerade",
+              'content' => "ip protocol tcp ct original proto-dst 8888 masquerade",
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])
@@ -272,10 +271,10 @@ describe 'multiwall::rule' do
         it {
           if os_check
             is_expected.to contain_multiwall__nftables__rule(params['name'])
-            is_expected.to contain_nftables__rule('POSTROUTING-masq_incoming_from_ctorigsrc_10.10.10.10').with(
+            is_expected.to contain_nftables__rule('POSTROUTING-masq_incoming_from_ctorigsrc_10_10_10_10').with(
               'ensure' => 'present',
               'table' => "ip-#{params['table']}",
-              'content' => %r{ip daddr #{facts[:networking]['ip']} *ct original saddr 10.10.10.10 masquerade},
+              'content' => "ip daddr #{facts[:networking]['ip']} ct original saddr 10.10.10.10 masquerade",
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])
@@ -311,7 +310,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('POSTROUTING-ctorigsrcport_for_8888_and_masq').with(
               'ensure' => 'present',
               'table' => "inet-#{params['table']}",
-              'content' => %r{ip protocol 6 *ct original proto-src 8888 masquerade},
+              'content' => 'ip ct original protocol 6 ct original proto-src 8888 masquerade',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])
@@ -343,7 +342,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-ctstatus_to_expected_and_assured').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => %r{ip saddr 0.0.0.0 *ct status expected,assured accept},
+              'content' => "ip saddr 0.0.0.0 ct status expected,assured accept",
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])
@@ -453,7 +452,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-testing_dst_type_blackhole_to_cover_both').with(
              'ensure' => 'present',
              'table' => 'inet-filter',
-             'content' => 'ip daddr 10.10.10.10,20.20.20.20 drop',
+             'content' => 'fib daddr type blackhole drop',
            )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])
@@ -547,7 +546,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('MANGLE-testing_uid_and_gid_parameters').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => 'skuid 1000 skgid 1000 accept',
+              'content' => 'meta skuid 1000 meta skgid 1000 accept',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])
@@ -578,7 +577,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-Testing_goto_verdicts_parameter').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => "goto #{params['goto']}",
+              'content' => "goto testchain",
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])

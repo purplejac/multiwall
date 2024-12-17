@@ -97,9 +97,10 @@ define multiwall::nftables::rule (
   # To manage conntrack protocol overriding 'standard' protocol definition, it is set ahead
   # of reading the actual protocol settings through the params loop
   #
-  if 'ctproto' in $sanitised_params and ('ctorigdstport' in $sanitised_params or ctorigsrcport in $sanitised_params) {
-    $set_proto = $sanitised_params['ctproto']
-  } elsif 'proto' in $sanitised_params {
+#  if 'ctproto' in $sanitised_params and ('ctorigdstport' in $sanitised_params or ctorigsrcport in $sanitised_params) {
+#    $set_proto = $sanitised_params['ctproto']
+#  } elsif 'proto' in $sanitised_params {
+  if 'proto' in $sanitised_params {
     if $sanitised_params['proto'] == 'all' {
       $set_proto = lookup('multiwall::nftables::rule::all_protocols')
     } else {
@@ -122,14 +123,18 @@ define multiwall::nftables::rule (
 #        $direction_hash = lookup("multiwall::nftables::rule::ctdirections")  #${param_value.downcase()}")
 #        $ct_direction = $direction_hash[$param_value.downcase()]
 #      } elsif $parameter in ['proto', 'ctproto'] {
-      if $parameter in ['proto', 'ctproto'] {
+      if $parameter in ['proto'] {
         if 'source' in $sanitised_params and 'destination' in $sanitised_params {
           $param_rule = lookup('multiwall::nftables::rule::proto_src_dst')
         } else {
           $param_rule = lookup('multiwall::nftables::rule::proto_no_src_dst')
         }
 
-        "${body_set} ${param_rule}"
+        if $body_set == 'ip' {
+          $param_rule
+        } else {
+          "${body_set} ${param_rule}"
+        }
       } elsif $parameter =~ /hashlimit/ {
         #
         # For simplicity and functionality, hashlimit is only applied on the hashlimit_name
@@ -176,7 +181,7 @@ define multiwall::nftables::rule (
       } else {
         $param_rule = lookup("multiwall::nftables::rule::${parameter}")
 
-        if $parameter =~ /^ct/ and $body_set == 'ip' {
+        if ($parameter =~ /^ct(d|o)/ or $param_rule =~ /^(ip|fib|meta|goto) /) and $body_set == 'ip' {
           $param_rule
         } elsif $parameter =~ /ifname/ {
           $body_set

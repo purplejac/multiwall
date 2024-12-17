@@ -10,6 +10,7 @@ describe 'multiwall::nftables::rule' do
       'params' => {
         'ensure' => 'present',
         'chain' => 'INPUT',
+        'family' => 'inet',
         'iniface' => '! lo',
         'proto' => 'all',
         'destination' => '127.0.0.1/8',
@@ -43,7 +44,7 @@ describe 'multiwall::nftables::rule' do
           is_expected.to contain_nftables__rule('INPUT-reject_local_traffic_not_on_loopback_interface').with(
             'ensure' => params['params']['ensure'],
             'table' => 'inet-filter',
-            'content' => 'ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } reject',
+            'content' => 'ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } meta iifname != lo reject',
           )
         end
       }
@@ -56,6 +57,7 @@ describe 'multiwall::nftables::rule' do
           'params' => {
             'ensure' => 'present',
             'chain' => 'OUTPUT',
+            'family' => 'inet',
             'destination' => '10.10.10.10',
             'proto' => 'tcp',
             'dport' => '8080',
@@ -68,12 +70,14 @@ describe 'multiwall::nftables::rule' do
       it { is_expected.to compile }
       it {
         if os_check
+          pp catalogue.resources
           is_expected.to contain_multiwall__nftables__rule(params['name'])
           is_expected.to contain_nftables__rule('OUTPUT-testing_dport_setting_with_some_basics').with(
             'name' => 'OUTPUT-testing_dport_setting_with_some_basics',
             'ensure' => 'present',
             'table' => 'inet-filter',
-            'content' => "ip daddr #{params['destination']} ip protocol #{params['proto']} dport #{params['dport']} accept",
+#            'content' => "ip daddr #{params['destination']} ip protocol #{params['proto']} dport #{params['dport']} accept",
+            'content' => 'ip daddr 10.10.10.10 ip protocol tcp dport 8080 accept',
           )
         end
       }
