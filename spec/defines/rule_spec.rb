@@ -42,7 +42,7 @@ describe 'multiwall::rule' do
               'ensure' => params['ensure'],
               'table' => 'inet-filter',
               'order' => '03',
-              'content' => "ip daddr #{params['destination']} ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } meta iifname != lo #{params['jump']}",
+              'content' => "iifname != lo ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } reject",
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
@@ -101,7 +101,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-connlimit_rule').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => 'meta iifname eth0 ct state new add @ip4dynamic { ip saddr and 255.255.255.0 ct count over 3 } reject',
+              'content' => 'iifname eth0 ct state new add @ip4dynamic { ip saddr and 255.255.255.0 ct count over 3 } reject',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name']).with_name(params['name'])

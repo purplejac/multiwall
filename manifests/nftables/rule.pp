@@ -39,13 +39,14 @@
 #
 define multiwall::nftables::rule (
   Hash $params,
-  Array $param_list    = lookup("multiwall::nftables::rule::param_list"),
+  Array   $param_list  = lookup('multiwall::nftables::rule::param_list'),
   Integer $high_offset = lookup("multiwall::nftables::rule::high_offset", { "default_value" => 20 }),
   Integer $low_offset  = lookup("multiwall::nftables::rule::low_offset", { "default_value" => 10 }),
   Integer $mid_val     = lookup("multiwall::nftables::rule::mid_val", { "default_value" => 50 }),
   Integer $min_point   = lookup("multiwall::nftables::rule::min_point", { "default_value" => $mid_val - 20 }),
   Array $unsupported   = lookup("multiwall::nftables::rule::unsupported", { "default_value" => [] }),
 ) {
+  require nftables
   $sanitised_params = multiwall::validate_nf_params($params, $unsupported)
 
   if $name =~ /^(\d+)/ {
@@ -101,10 +102,16 @@ define multiwall::nftables::rule (
 #    $set_proto = $sanitised_params['ctproto']
 #  } elsif 'proto' in $sanitised_params {
   if 'proto' in $sanitised_params {
-    if $sanitised_params['proto'] == 'all' {
-      $set_proto = lookup('multiwall::nftables::rule::all_protocols')
+    if $sanitised_params['proto'] =~ 'all' {
+      $translated_proto = lookup('multiwall::nftables::rule::all_protocols')
     } else {
-      $set_proto = $sanitised_params['proto']
+      $translated_proto = $sanitised_params['proto']
+    }
+
+    if ('dport' in $sanitised_params) or ('sport' in $sanitised_params) {
+      $set_proto = $translated_proto
+    } else {
+      $set_proto = "ip protocol ${translated_proto}"
     }
   }
 
@@ -123,19 +130,20 @@ define multiwall::nftables::rule (
 #        $direction_hash = lookup("multiwall::nftables::rule::ctdirections")  #${param_value.downcase()}")
 #        $ct_direction = $direction_hash[$param_value.downcase()]
 #      } elsif $parameter in ['proto', 'ctproto'] {
-      if $parameter in ['proto'] {
-        if 'source' in $sanitised_params and 'destination' in $sanitised_params {
-          $param_rule = lookup('multiwall::nftables::rule::proto_src_dst')
-        } else {
-          $param_rule = lookup('multiwall::nftables::rule::proto_no_src_dst')
-        }
-
-        if $body_set == 'ip' {
-          $param_rule
-        } else {
-          "${body_set} ${param_rule}"
-        }
-      } elsif $parameter =~ /hashlimit/ {
+#      if $parameter in ['proto'] {
+#        if 'source' in $sanitised_params and 'destination' in $sanitised_params {
+#          $param_rule = lookup('multiwall::nftables::rule::proto_src_dst')
+#        } else {
+#          $param_rule = lookup('multiwall::nftables::rule::proto_no_src_dst')
+#        }
+#
+#        if $body_set == 'ip' {
+#          $param_rule
+#        } else {
+#          "${body_set} ${param_rule}"
+#        }
+#      } elsif $parameter =~ /hashlimit/ {
+      if $parameter =~ /hashlimit/ {
         #
         # For simplicity and functionality, hashlimit is only applied on the hashlimit_name
         # as it is always required for a hashlimit.
@@ -181,7 +189,7 @@ define multiwall::nftables::rule (
       } else {
         $param_rule = lookup("multiwall::nftables::rule::${parameter}")
 
-        if ($parameter =~ /^ct(d|o)/ or $param_rule =~ /^(ip|fib|meta|goto) /) and $body_set == 'ip' {
+        if ($parameter =~ /^ct(d|o)/ or $param_rule =~ /^(ip|fib|meta|goto|iifname|oifname) /) and $body_set == 'ip' {
           $param_rule
         } elsif $parameter =~ /ifname/ {
           $body_set

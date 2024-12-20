@@ -64,7 +64,7 @@ multiwall::nftables::rule::jump_commands:
   return: 'return'
   dnat: 'dnat %{params.todest}'
   snat: 'snat %{params.tosource}'
-  log: '%{log_prefix}'
+  log: '%{params.log_prefix}'
   netmap: 'netmap to %{params.to}'
   masquerade: 'masquerade'
   redirect: 'redirect %{params.toports}'
@@ -72,6 +72,8 @@ multiwall::nftables::rule::jump_commands:
   ct: 'ct state %{params.ctstate}'
 
 multiwall::nftables::rule::param_list:
+  - iniface
+  - outiface
   - saddr
   - source
   - src_range
@@ -99,8 +101,6 @@ multiwall::nftables::rule::param_list:
   - isfragment
   - ishasmorefrags
   - islastfrag
-  - iniface
-  - outiface
   - ctproto
   - ctdir
   - ctorigdst
@@ -192,8 +192,9 @@ multiwall::nftables::rule::ctorigsrcport: "ct original proto-src %{param_value}"
 multiwall::nftables::rule::connlimit_init: "ct state new add @ip4dynamic"
 multiwall::nftables::rule::connlimit_above: "%{lookup('multiwall::nftables::rule::connlimit_init')} %{param_value}"
 multiwall::nftables::rule::connlimit_upto: "%{lookup('multiwall::nftables::rule::connlimit_init')} %{param_value}"
-multiwall::nftables::rule::proto_no_src_dst: "%{protocol} protocol %{set_proto}"
-multiwall::nftables::rule::proto_src_dst: "%{protocol} protocol %{set_proto}"
+#multiwall::nftables::rule::proto_no_src_dst: "%{protocol} protocol %{set_proto}"
+#multiwall::nftables::rule::proto_src_dst: "%{protocol} protocol %{set_proto}"
+multiwall::nftables::rule::proto: "%{set_proto}"
 multiwall::nftables::rule::ct_status: "ct status %{fmt_ct_status}"
 multiwall::nftables::rule::date_start: "meta time >= %{param_value}"
 multiwall::nftables::rule::date_stop: "meta time <= %{param_value}"
@@ -208,9 +209,9 @@ multiwall::nftables::rule::goto: "goto %{param_value}"
 multiwall::nftables::rule::hop_limit: "%{family} hoplimit lt %{param_value}"
 
 multiwall::nftables::rule::icmp: "icmp type %{param_value}"
-multiwall::nftables::rule::iniface: "meta iifname %{param_value}"
-multiwall::nftables::rule::outiface: "meta oifname %{param_value}"
-multiwall::nftables::rule::ipsec_dir: 'ipsec policy %{parameter_value}'
+multiwall::nftables::rule::iniface: "iifname %{param_value}"
+multiwall::nftables::rule::outiface: "oifname %{param_value}"
+multiwall::nftables::rule::ipsec_dir: 'ipsec policy %{param_value}'
 
 
 # IPSET Management to be implemented later. Probably through a fact to read ipset output, for any nodes where sets 
@@ -253,7 +254,7 @@ multiwall::nftables::rule::nflog_size: "queue-threshold %{param_value"
 multiwall::nftables::rule::nflog_snaplen: "snaplen %{param_value}"
 multiwall::nftables::rule::notrack: "notrack"
 multiwall::nftables::rule::pkttype: "meta pkttype %{param_value}"
-multiwall::nftables::rule::proto: "%{param_value}"
+#multiwall::nftables::rule::proto: "%{param_value}"
 multiwall::nftabhles::rule::queue_config: "queue %{param_value}"
 multiwall::nftables::rule::random: "masquerade random"
 multiwall::nftables::rule::random_fully: "masquerade fully-random"

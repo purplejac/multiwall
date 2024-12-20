@@ -21,7 +21,7 @@
 #
 class multiwall (
   Enum['iptables', 'nftables']  $target_firewall = 'nftables',
-  Hash    $target_fw_features = {},
+  Hash                          $target_fw_features = {},
 ) {
   if $target_fw_features == {} {
     include "multiwall::${target_firewall}"
@@ -29,10 +29,20 @@ class multiwall (
     class { "multiwall::${target_firewall}":
       target_fw_features => $target_fw_features,
     }
+  }
 
-    nftables::set { 'ip4dynamic':
-      type  => 'ipv4_addr',
-      flags => ['dynamic'],
-    }
+  file { ['/etc/puppetlabs/facter', '/etc/puppetlabs/facter/facts.d']:
+    ensure => directory,
+    owner  => 'root',
+    group  => 'root',
+    mode   => '0644',
+  }
+
+  file { '/etc/puppetlabs/facter/facts.d/multiwall_target.yaml':
+    ensure => file,
+    owner  => 'root',
+    group  => 'root',
+    mode   => '0644',
+    content => "multiwall_target: ${target_firewall}"
   }
 }

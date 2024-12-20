@@ -22,4 +22,9 @@ class multiwall::nftables (
       * => $target_fw_features,
     }
   }
+
+  nftables::set { 'ip4dynamic':
+    type  => 'ipv4_addr',
+    flags => ['dynamic'],
+  }
 }

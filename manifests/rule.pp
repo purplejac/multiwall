@@ -992,7 +992,7 @@ define multiwall::rule (
   Enum[present, absent, 'present', 'absent']                                                                                                                                                      $ensure = 'present',
   Optional[String[1]]                                                                                                                                                                             $chain = undef,
   Enum['nat', 'mangle', 'filter', 'raw', 'rawpost', 'broute', 'security']                                                                                                                         $table = 'filter',
-  Enum['iptables', 'nftables']                                                                                                                                                                    $target_firewall = lookup('multiwall::target_firewall', { default_value => 'nftables' }),
+  # Enum['iptables', 'nftables']                                                                                                                                                                    $target_firewall = lookup('multiwall::target_firewall', { default_value => 'nftables' }),
   String                                                                                                                                                                                          $family = 'inet',
   Optional[Enum['accept','reject','drop']]                                                                                                                                                        $action = undef,
   Optional[String]                                                                                                                                                                                $jump   = if $action { $action.upcase() } else { $action },
@@ -1294,14 +1294,18 @@ define multiwall::rule (
     $value
   }
 
-  if  $target_firewall != 'iptables' {
-    $firewall_params = $tmp_firewall_params + { 'family' => $family }
-  } else {
-    $firewall_params = $tmp_firewall_params
-  }
+  $target_firewall = $facts['multiwall_target'] #lookup('multiwall::target_firewall', { 'default_value' => 'nftables' })
 
-  #
-  # Enact resource by versioned type
-  #
-  create_resources("multiwall::${target_firewall}::rule", { $title => { 'name' => $name, 'params' => $firewall_params } })
+  if $facts['target_firewall'] {
+    if  $target_firewall != 'iptables' {
+      $firewall_params = $tmp_firewall_params + { 'family' => $family }
+    } else {
+      $firewall_params = $tmp_firewall_params
+    }
+
+    #
+    # Enact resource by versioned type
+    #
+    create_resources("multiwall::${target_firewall}::rule", { $title => { 'name' => $name, 'params' => $firewall_params } })
+  }
 }

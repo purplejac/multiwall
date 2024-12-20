@@ -41,10 +41,12 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
     # have actually been set.
     # Furthermore, do some processing to translate functionality between iptables and nftables properly.
     #
-    params.each do |parameter, value|
+    params.each do |parameter, iter_val|
       raise ArgumentError, "The following parameter is unsupported in multiwall: #{parameter} - see Changelog or in-module hiera for further information." if unsupported.include?(parameter)
 
-      if value
+      unless iter_val.nil? 
+        value = iter_val.is_a?(String) ? iter_val.gsub('! ', '!= ') : iter_val
+
         if clusterip_keys.include?(parameter) && !cluster_check && !value.nil?
           clusterip_keys.each do |param_name|
             raise ArgumentError, "ClusterIP parameters missing matching values for #{parameter}" if param_name.nil?
@@ -94,7 +96,7 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
 
         when %r{(out|in)iface}
           fixed_param_name = parameter
-          fixed_value = value.gsub('! ', '!= ')
+          fixed_value = value
 
         when 'log_level'
           log_levels = {
@@ -142,6 +144,10 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
           fixed_param_name = 'queue_config'
           queue_cmd = (parameter == queue_bypass) ? 'bypass' : "num #{value}"
           fixed_value = fixed_params.include?(fixed_param_name) ? params[fixed_param_name] + queue_cmd : queue_cmd
+
+        when %r{.*port}
+          fixed_param_name = parameter
+          fixed_value = value.is_a?(Array) ? "{ #{value.join(',')} }" : value
 
         when 'reject'
           split_value = value.split('-')

@@ -5,16 +5,18 @@ require 'spec_helper_acceptance'
 describe 'Multiwall setup' do
   context 'standard usage' do
     pp = <<-PUPPETCODE
-        class { multiwall: }
+        include multiwall
     PUPPETCODE
 
     it do
+      idempotent_apply(pp)
       idempotent_apply(pp)
     end
   end
 
   context 'Test adding firewall rules' do
     pp = <<-PUPPETCODE
+      include multiwall
       multiwall::rule { '090 forward allow local':
           chain       => 'FORWARD',
           proto       => 'all',
@@ -94,6 +96,7 @@ describe 'Multiwall setup' do
     PUPPETCODE
 
     it do
+      idempotent_apply(pp)
       idempotent_apply(pp)
     end
   end
