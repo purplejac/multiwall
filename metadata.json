@@ -2,9 +2,9 @@
   "name": "purplejac-multiwall",
   "version": "0.1.0",
   "author": "Rasmus Hald",
-  "summary": "",
+  "summary": "Firewall module to unify firewall rules, starting with iptables to nftables management. Will take puppetlabs/firewall formatted rules and translate them to the targeted firewall.",
   "license": "Apache-2.0",
-  "source": "",
+  "source": "https://github.com/purplejac/multiwall",
   "dependencies": [
     {
       "name": "puppetlabs/firewall",

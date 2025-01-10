@@ -15,7 +15,7 @@ hierarchy:
       - "os/%{facts.os.family}/%{facts.kernelrelease}.yaml"
   - name: 'Firewall Translations'    
     paths:
-      - "firewalls/*.yaml"
+      - "firewalls/%{facts.multiwall_target}.yaml"
   - name: "osname"
     paths:
       - "os/%{facts.os.family}/%{facts.os.name}-%{facts.os.release.major}.yaml"

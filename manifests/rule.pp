@@ -1294,7 +1294,7 @@ define multiwall::rule (
     $value
   }
 
-  if  $target_firewall != 'iptables' {
+  unless $target_firewall == 'iptables' {
     $firewall_params = $tmp_firewall_params + { 'family' => $family }
   } else {
     $firewall_params = $tmp_firewall_params

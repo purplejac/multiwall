@@ -50,10 +50,6 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
           clusterip_keys.each do |param_name|
             raise ArgumentError, "ClusterIP parameters missing matching values for #{parameter}" if param_name.nil?
           end
-#        elsif parameter == 'ctdir' && (!params['source'].nil? || !params['destination'].nil?)
-#          raise ArgumentError, 'ctdir auto-sets source/destination values for nftables to match direction. Source/Destination parameters should be unset'
-#        elsif ctorig_port_keys.include?(parameter) && (!params['proto']) && (!params['ctproto'])
-#          raise ArgumentError, 'The ctorig port parameter requires that the corresponding protocol is defined with the "proto" parameter.'
         end
 
         case parameter
@@ -66,13 +62,17 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
           fixed_param_name = parameter
           fixed_value = value.downcase
 
+        when %r{[in|out]iface}
+          fixed_param_name = parameter
+          fixed_value = value
+
         when 'length'
           fixed_param_name = parameter
           fixed_value = value.sub(%r{:}, '-')
 
         when 'ctstatus'
           fixed_param_name = parameter
-          fixed_value = parameter.is_a?(Array) ? parameter.join(',').downcase : parameter.downcase
+          fixed_value = value.is_a?(Array) ? value.join(',').downcase : value.downcase
 
         when %r{date_.*}
           fixed_param_name = parameter
@@ -111,6 +111,17 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
           # tcp options and sequence need the same setting configured in nftables, so they're unified here
           fixed_param_name = log_tcp
           fixed_value = fixed_params.include?('log_tcp') ? 'options,sequence' : value
+        when %r{(s|d)port}
+          fixed_param_name = parameter
+          unless params.include?('proto')
+            raise ArgumentError, "#{parameter} cannot be decalred without also specifying a protocol."
+          end
+
+          if value.is_a?(Array)
+            fixed_value = "{ #{value.join(',')} }"
+          else
+            fixed_value = value
+          end
 
         when %r{^(ct)?state}
           #
@@ -121,7 +132,12 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
           # compilation will fail.
           #
           fixed_param_name = 'ctstate'
-          fixed_value = value
+
+          if value.is_a?(Array)
+            fixed_value = "{ #{value.join(',')} }".downcase()
+          else
+            fixed_value = value.downcase()
+          end
 
         when %r{^(nf)?log_prefix}
           fixed_param_name = 'log_prefix'
@@ -258,7 +274,13 @@ Puppet::Functions.create_function(:'multiwall::validate_nf_params') do
           fixed_value = value
         end
 
-        fixed_params[fixed_param_name] = fixed_value
+        if fixed_value.is_a?(Array)
+          fixed_params[fixed_param_name] = fixed_value.join(',')
+        elsif fixed_value.is_a?(String)
+          fixed_params[fixed_param_name] = fixed_value.sub('!', '!=')
+        else
+          fixed_params[fixed_param_name] = fixed_value
+        end
       end
     end
     fixed_params

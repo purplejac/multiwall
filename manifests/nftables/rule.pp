@@ -93,43 +93,34 @@ define multiwall::nftables::rule (
     $netmask = multiwall::cidr2netmask($sanitised_params['connlimit_mask'])
   }
 
-  #
-  # To manage conntrack protocol overriding 'standard' protocol definition, it is set ahead
-  # of reading the actual protocol settings through the params loop
-  #
-  if 'ctproto' in $sanitised_params and ('ctorigdstport' in $sanitised_params or ctorigsrcport in $sanitised_params) {
-    $set_proto = $sanitised_params['ctproto']
-  } elsif 'proto' in $sanitised_params {
-    if $sanitised_params['proto'] == 'all' {
-      $set_proto = lookup('multiwall::nftables::rule::all_protocols')
-    } else {
-      $set_proto = $sanitised_params['proto']
-    }
-  }
-
   $content = $param_list.reduce('') |$body, $parameter| {
-    if $parameter =~ /ifname/ {
-      $ifrule = lookup("multiwall::nftables::rule::${parameter}")
-      $body_set = "${ifrule} ${body}"
-    } else {
-      $body_set = $body ? { default => $body, '' => $protocol }
-    }
+    $body_set = $body ? { default => $body, '' => $protocol }
 
     if $parameter in $sanitised_params {
-      $param_value = $sanitised_params[$parameter].downcase()
+      $param_value = if $parameter == 'goto' { $sanitised_params[$parameter] } else { $sanitised_params[$parameter].downcase() }
 
-#      if $parameter == 'ctdir' {
-#        $direction_hash = lookup("multiwall::nftables::rule::ctdirections")  #${param_value.downcase()}")
-#        $ct_direction = $direction_hash[$param_value.downcase()]
-#      } elsif $parameter in ['proto', 'ctproto'] {
-      if $parameter in ['proto', 'ctproto'] {
-        if 'source' in $sanitised_params and 'destination' in $sanitised_params {
-          $param_rule = lookup('multiwall::nftables::rule::proto_src_dst')
+      if $parameter == 'proto' { # in ['proto', 'ctproto'] {
+        unless 'sport' in $sanitised_params or 'dport' in $sanitised_params {
+          if $param_value == 'all' {
+            $set_proto = lookup('multiwall::nftables::rule::all_protocols')
+          } else {
+            $set_proto = $param_value
+          }
+
+          if 'source' in $sanitised_params and 'destination' in $sanitised_params {
+            $param_rule = lookup('multiwall::nftables::rule::proto_src_dst')
+          } else {
+            $param_rule = lookup('multiwall::nftables::rule::proto_no_src_dst')
+          }
+
+          if $body_set =~ /ip6{0,1}$/ {
+            $param_rule
+          } else {
+            "${body_set} ${param_rule}"
+          }
         } else {
-          $param_rule = lookup('multiwall::nftables::rule::proto_no_src_dst')
+          $body_set
         }
-
-        "${body_set} ${param_rule}"
       } elsif $parameter =~ /hashlimit/ {
         #
         # For simplicity and functionality, hashlimit is only applied on the hashlimit_name
@@ -158,7 +149,7 @@ define multiwall::nftables::rule (
           before  => Nftales::Rule[$sanitised_name],
         }
       } elsif $parameter == 'conntrack' {
-        # There are several potential permutations of the conntract traffic management,
+        # There are several potential permutations of the conntrac traffic management,
         # while some are more likely than others, it made sense to support them all and
         # trust the users.
         # So management of the address and port/directional management is farmed out to
@@ -173,13 +164,17 @@ define multiwall::nftables::rule (
       } elsif $parameter == 'jump' {
         $param_rule = lookup("multiwall::nftables::rule::jump_commands.${param_value}")
         "${body_set} ${param_rule}"
+      } elsif $parameter =~ /^(s|d)port/ {
+        $port_proto = $sanitised_params['proto']
+        $param_rule = lookup("multiwall::nftables::rule::${parameter}")
+
+        "${body_set} ${param_rule}"
       } else {
         $param_rule = lookup("multiwall::nftables::rule::${parameter}")
 
-        if $parameter =~ /^ct/ and $body_set == 'ip' {
+        if $body_set =~ /ip6{0,1}$/ and ($param_rule =~ /^(ip|fib|sk|goto)/ or $parameter =~ /^(ct|(out|in)iface)/) {
           $param_rule
-        } elsif $parameter =~ /ifname/ {
-          $body_set
+
         } else {
           "${body_set} ${param_rule}"
         }

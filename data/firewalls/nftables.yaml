@@ -64,7 +64,7 @@ multiwall::nftables::rule::jump_commands:
   return: 'return'
   dnat: 'dnat %{params.todest}'
   snat: 'snat %{params.tosource}'
-  log: '%{log_prefix}'
+  log: '%{params.log_prefix}'
   netmap: 'netmap to %{params.to}'
   masquerade: 'masquerade'
   redirect: 'redirect %{params.toports}'
@@ -102,6 +102,7 @@ multiwall::nftables::rule::param_list:
   - isfragment
   - ishasmorefrags
   - islastfrag
+  - ctproto
   - ctdir
   - ctorigdst
   - ctorigsrc
@@ -110,6 +111,7 @@ multiwall::nftables::rule::param_list:
   - conntrack
   - connlimit_above
   - connlimit_upto
+  - ctstate
   - ctstatus
   - cluster_ip_hash_init
   - date_start
@@ -159,12 +161,12 @@ multiwall::nftables:rule::burst: 'burst %{param_value}'
 multiwall::nftables::rule::jump: "%{lookup(multiwall::nftables::jump_commands)}"
 multiwall::nftables::rule::cgroup: 'meta nfproto cgroupv2 cgroup %{param_value}'
 multiwall::nftables::rule::connlimit_mask: "saddr & %{netmask}"
-multiwall::nftables::rule::src_range: '%{lookup("multiwall::nftables::rule::src_range")}'
-multiwall::nftables::rule::source: "saddr %{param_value}"
-multiwall::nftables::rule::dst_range: "%{lookup('multiwall::nftables::rule::dst_range')}"
-multiwall::nftables::rule::destination: "daddr %{param_value}"
-multiwall:nftables:sport: "dport %{param_value}"
-multiwall:nftables:dport: "dport %{param_value}"
+multiwall::nftables::rule::src_range: "%{protocol} saddr %{param_value}"
+multiwall::nftables::rule::source: "%{protocol} saddr %{param_value}"
+multiwall::nftables::rule::dst_range: "%{protocol} daddr %{param_value}"
+multiwall::nftables::rule::destination: "%{protocol} daddr %{param_value}"
+multiwall::nftables::rule::sport: "%{port_proto} dport %{param_value}"
+multiwall::nftables::rule::dport: "%{port_proto} sport %{param_value}"
 
 #
 # https://wiki.nftables.org/wiki-nftables/index.php/Mangling_packet_headers outlines this as the appropriate approach to
@@ -182,6 +184,9 @@ multiwall::nftables::rule::mss: "option maxseg size %{param_value}"
 multiwall::nftables::rule::clusterip_hash_init: 'jhash ct original saddr mod %{params_val} seed %{params.clusterip_hash_init} eq %{params.clusterip_local_node} meta pkttype set host counter'
 
 multiwall::nftables::rule::ctdir: "ct direction %{param_value}"
+multiwall::nftables::rule::ctproto: "ct original protocol %{param_value}"
+multiwall::nftables::rule::ctstate: "ct state %{param_value}"
+multiwall::nftables::rule::ctstatus: "ct status %{param_value}"
 
 multiwall::nftables::rule::ctorigdst: "ct original daddr %{param_value}"
 multiwall::nftables::rule::ctorigsrc: "ct original saddr %{param_value}"
@@ -191,14 +196,14 @@ multiwall::nftables::rule::ctorigsrcport: "ct original proto-src %{param_value}"
 
 multiwall::nftables::rule::connlimit_above: "ct count over %{param_value}"
 multiwall::nftables::rule::connlimit_upto: "ct count under %{param_value}"
-multiwall::nftables::rule::proto_no_src_dst: "ip protocol %{set_proto}"
-multiwall::nftables::rule::proto_src_dst: "ip protocol %{set_proto}"
+multiwall::nftables::rule::proto_no_src_dst: "%{protocol} protocol %{set_proto}"
+multiwall::nftables::rule::proto_src_dst: "%{protocol} protocol %{set_proto}"
 multiwall::nftables::rule::ct_status: "ct status %{fmt_ct_status}"
 multiwall::nftables::rule::date_start: "meta time >= %{param_value}"
 multiwall::nftables::rule::date_stop: "meta time <= %{param_value}"
 multiwall::nftables::rule::gateway: "dup to %{param_value}"
-multiwall::nftables::rule::uid: "skuid %{param_value}:"
-multiwall::nftables::rule::gid: "skgid %{param_value}:"
+multiwall::nftables::rule::uid: "skuid %{param_value}"
+multiwall::nftables::rule::gid: "skgid %{param_value}"
 multiwall::nftables::rule::goto: "goto %{param_value}"
 
 # hop_limit in the firewall module was intended for ip6 only, using the header field.
@@ -209,7 +214,7 @@ multiwall::nftables::rule::hop_limit: "%{family} hoplimit lt %{param_value}"
 multiwall::nftables::rule::icmp: "icmp type %{param_value}"
 multiwall::nftables::rule::iniface: "iifname %{param_value}"
 multiwall::nftables::rule::outiface: "oifname %{param_value}"
-multiwall::nftables::rule::ipsec_dir: 'ipsec policy %{parameter_value}'
+multiwall::nftables::rule::ipsec_dir: 'ipsec policy %{param_value}'
 
 
 # IPSET Management to be implemented later. Probably through a fact to read ipset output, for any nodes where sets 
@@ -250,7 +255,6 @@ multiwall::nftables::rule::nflog_group: "log group %{param_value}"
 multiwall::nftables::rule::nflog_size: "queue-threshold %{param_value"
 multiwall::nftables::rule::nflog_snaplen: "snaplen %{param_value}"
 multiwall::nftables::rule::notrack: "notrack"
-multiwall::nftables::rule::outiface: "meta oifname %{param_value}"
 multiwall::nftables::rule::pkttype: "meta pkttype %{param_value}"
 multiwall::nftables::rule::proto: "%{param_value}"
 multiwall::nftabhles::rule::queue_config: "queue %{param_value}"

@@ -1,3 +1,2 @@
---- {}
+---
 multiwall::target_firewall: 'nftables'
-nftables::default_config_mode: '0640'
