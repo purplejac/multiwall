@@ -1,0 +1,282 @@
+---
+# Unsupported/Unimplemented firewall-module parameters
+#
+# mask relates directly to the 'recent' module. Will revisit after those params are implemented
+# month_days does not have a direct 1:1 conversion, so leaving for now
+#
+# physdev features are specifically being marked as deprecated by nftables developers here:
+# https://wiki.nftables.org/wiki-nftables/index.php/Supported_features_compared_to_xtables#physdev
+#
+# So they are all added to the unsupported list.
+#
+# GeoIP matching also requires a bit of additional work, so is being pushed a bit down the track
+# https://wiki.nftables.org/wiki-nftables/index.php/GeoIP_matching
+#
+# Looking to implement string matching, but need to have a think about the best approach, so leaving it
+# unsupported for the first run-through here.
+#
+# time_contiguous has been deprecated from newer versions of iptables, so leaving unsupported for now.
+#
+# u32 is not really a fixture in nftables, should look to 'raw' instead
+#
+multiwall::nftables::rule::unsupported:
+  - 'bytecode'
+  - 'checksum_fill'
+  - 'condition'
+  - 'ctexpire'
+  - 'kernel_timezone'
+  - 'mask'
+  - 'month_days'
+  - 'physdev'
+  - 'physdev_in'
+  - 'physdev_is_bridged'
+  - 'physdev_is_in'
+  - 'physdev_is_out'
+  - 'physdev_out'
+  - 'rdest'
+  - 'reap'
+  - 'recent'
+  - 'rhitcount'
+  - 'rname'
+  - 'rseconds'
+  - 'rsource'
+  - 'rttl'
+  - 'src_cc'
+  - 'string'
+  - 'string_algo'
+  - 'string_from'
+  - 'string_hex'
+  - 'string_to'
+  - 'time_contiguous'
+  - 'u32'
+  - 'zone'
+
+# 
+# nftables rule translations
+# 
+multiwall::nftables::rule::all_protocols: '{ icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp }'
+
+multiwall::nftables::rule::jump_commands:
+  accept: 'accept'
+  reject: 'reject'
+  drop: 'drop'
+  queue: 'queue'
+  return: 'return'
+  dnat: 'dnat %{params.todest}'
+  snat: 'snat %{params.tosource}'
+  log: '%{params.log_prefix}'
+  netmap: 'netmap to %{params.to}'
+  masquerade: 'masquerade'
+  redirect: 'redirect %{params.toports}'
+  mark: 'meta mark set %{params.connmark}'
+  ct: 'ct state %{params.ctstate}'
+
+multiwall::nftables::rule::param_list:
+  - iniface
+  - outiface
+  - saddr
+  - connlimit_mask
+  - source
+  - src_range
+  - ipset
+  - daddr
+  - destination
+  - dst_range
+  - mac_source
+  - hop_limit
+  - length
+  - proto
+  - sport
+  - dport
+  - tcp_flags
+  - set_dscp
+  - set_dscp_class
+  - clamp_mss_to_pmtu
+  - mss
+  - src_type
+  - dst_type
+  - icmp
+  - match_mark
+  - type_unreachable
+  - isfirstfrag
+  - isfragment
+  - ishasmorefrags
+  - islastfrag
+  - ctproto
+  - ctdir
+  - ctorigdst
+  - ctorigsrc
+  - ctorigdstport
+  - ctorigsrcport
+  - conntrack
+  - connlimit_above
+  - connlimit_upto
+  - ctstate
+  - ctstatus
+  - cluster_ip_hash_init
+  - date_start
+  - date_stop
+  - gateway
+  - uid
+  - gid
+  - ipsec_dir
+  - cgroup
+  - stat_mode_random
+  - stat_probability
+  - time_start
+  - time_stop
+  - week_days
+  - pkttype
+  - type_cast_src
+  - type_cast_dst
+  - rpfilter
+  - socket
+  - stat_mode_nth
+  - stat_every
+  - stat_packet
+  - log_prefix
+  - log_ip_options
+  - log_level
+  - log_tcp
+  - log_uid
+  - nflog_group
+  - nflog_size
+  - nflog_snaplen
+  - limit
+  - burst
+  - jump
+  - action
+  - goto
+  - random
+  - fully-random
+  - notrack
+  
+#
+# 
+# There is no direct burst parameter for nftables, instead we'll mimick by implementing by setting the rate
+# limit to 'bursts per second' and a max of one packet allowed to exceed.
+#
+multiwall::nftables:rule::burst: 'burst %{param_value}'
+
+multiwall::nftables::rule::jump: "%{lookup(multiwall::nftables::jump_commands)}"
+multiwall::nftables::rule::cgroup: 'meta nfproto cgroupv2 cgroup %{param_value}'
+multiwall::nftables::rule::connlimit_mask: "saddr & %{netmask}"
+multiwall::nftables::rule::src_range: "%{protocol} saddr %{param_value}"
+multiwall::nftables::rule::source: "%{protocol} saddr %{param_value}"
+multiwall::nftables::rule::dst_range: "%{protocol} daddr %{param_value}"
+multiwall::nftables::rule::destination: "%{protocol} daddr %{param_value}"
+multiwall::nftables::rule::sport: "%{port_proto} dport %{param_value}"
+multiwall::nftables::rule::dport: "%{port_proto} sport %{param_value}"
+
+#
+# https://wiki.nftables.org/wiki-nftables/index.php/Mangling_packet_headers outlines this as the appropriate approach to
+# clamp MSS to PMTU
+#
+multiwall::nftables::rule::clamp_mss_to_pmtu: 'flags syn tcp option maxseg size set rt mtu'
+multiwall::nftables::rule::mss: "option maxseg size %{param_value}"
+
+#
+# Mimicking cluster flag from iptables, for nftables, according to the suggestion outlined by RH using iptables-translate here:
+# https://access.redhat.com/solutions/7033787 - deliberately not checking if all three values exist, to provoke a failure if
+# one of the required parameters is not set - implemented according to available firewall settings and considering all other
+# clusterip params deprecated as per the KB
+#
+multiwall::nftables::rule::clusterip_hash_init: 'jhash ct original saddr mod %{params_val} seed %{params.clusterip_hash_init} eq %{params.clusterip_local_node} meta pkttype set host counter'
+
+multiwall::nftables::rule::ctdir: "ct direction %{param_value}"
+multiwall::nftables::rule::ctproto: "ct original protocol %{param_value}"
+multiwall::nftables::rule::ctstate: "ct state %{param_value}"
+multiwall::nftables::rule::ctstatus: "ct status %{param_value}"
+
+multiwall::nftables::rule::ctorigdst: "ct original daddr %{param_value}"
+multiwall::nftables::rule::ctorigsrc: "ct original saddr %{param_value}"
+
+multiwall::nftables::rule::ctorigdstport: "ct original proto-dst %{param_value}"
+multiwall::nftables::rule::ctorigsrcport: "ct original proto-src %{param_value}"
+
+multiwall::nftables::rule::connlimit_above: "ct count over %{param_value}"
+multiwall::nftables::rule::connlimit_upto: "ct count under %{param_value}"
+multiwall::nftables::rule::proto_no_src_dst: "%{protocol} protocol %{set_proto}"
+multiwall::nftables::rule::proto_src_dst: "%{protocol} protocol %{set_proto}"
+multiwall::nftables::rule::ct_status: "ct status %{fmt_ct_status}"
+multiwall::nftables::rule::date_start: "meta time >= %{param_value}"
+multiwall::nftables::rule::date_stop: "meta time <= %{param_value}"
+multiwall::nftables::rule::gateway: "dup to %{param_value}"
+multiwall::nftables::rule::uid: "skuid %{param_value}"
+multiwall::nftables::rule::gid: "skgid %{param_value}"
+multiwall::nftables::rule::goto: "goto %{param_value}"
+
+# hop_limit in the firewall module was intended for ip6 only, using the header field.
+# could potentially look at mimicking with a TTL decrease of some sorts for ipv4, but
+# currently am opting for just copying the ipv6 implementation.
+multiwall::nftables::rule::hop_limit: "%{family} hoplimit lt %{param_value}"
+
+multiwall::nftables::rule::icmp: "icmp type %{param_value}"
+multiwall::nftables::rule::iniface: "iifname %{param_value}"
+multiwall::nftables::rule::outiface: "oifname %{param_value}"
+multiwall::nftables::rule::ipsec_dir: 'ipsec policy %{param_value}'
+
+
+# IPSET Management to be implemented later. Probably through a fact to read ipset output, for any nodes where sets 
+# are already defined, and then migrating them to nftables sets before trying to manage them.
+# For now, it assumes that the corresponding set has been migrated to nftables already.
+multiwall::nftables::rule::ipset: "saddr @%{param_value}"
+
+# Ignoring ipvs
+
+multiwall::nftables::rule::isfirstfrag: 'frag first'
+
+# Trying to catch anything with a fragment ID set as representative of whether it is a fragment
+multiwall::nftables::rule::isfragment: 'frag id 0-65535'
+
+multiwall::nftables::rule::ishasmorefrags: 'frag more-fragments 1'
+multiwall::nftables::rule::islastfrag: 'frag frag-off != 0 frag more-fragments 0 counter'
+
+# nftables does not seem to have a feature to set a timezone, rather it just relies on the system. There is some suggestion that it would be possible
+# to implement something with meta matches, but that would go well beyond the boolean nature of the firewall::kernel_timezone parameter, so it is left
+# unimplemented for now.
+
+multiwall::nftables::rule::length: "length %{length_value}"
+multiwall::nftables::rule::limit: "limit rate %{param_value}"
+
+# Leaving translation of 'line' parameter from firewall out as it does not really translate to the current setup
+
+multiwall::nftables::rule::log_ip_options: "log flags ip options"
+multiwall::nftables::rule::log_level: "log level %{param_value}"
+multiwall::nftables::rule::log_prefix: "log prefix %{param_value}"
+# Unified parameters for tcp options and sequence
+multiwall::nftables::rule::log_tcp: "log flags tcp options %{param_value}"
+multiwall::nftables::rule::log_uid: "log flags skuid"
+multiwall::nftables::rule::src_type: "fib saddr type %{param_value} counter"
+multiwall::nftables::rule::dst_type: "fib daddr type %{param_value} counter"
+multiwall::nftables::rule::mac_source: "ether saddr %{param_value}"
+multiwall::nftables::rule::match_mark: "ct mark %{param_value}"
+multiwall::nftables::rule::nflog_group: "log group %{param_value}"
+multiwall::nftables::rule::nflog_size: "queue-threshold %{param_value"
+multiwall::nftables::rule::nflog_snaplen: "snaplen %{param_value}"
+multiwall::nftables::rule::notrack: "notrack"
+multiwall::nftables::rule::pkttype: "meta pkttype %{param_value}"
+multiwall::nftables::rule::proto: "%{param_value}"
+multiwall::nftabhles::rule::queue_config: "queue %{param_value}"
+multiwall::nftables::rule::random: "masquerade random"
+multiwall::nftables::rule::random_fully: "masquerade fully-random"
+multiwall::nftables::rule::reject: "reject with %{param_value}"
+multiwall::nftables::rule::rpfilter: "fib saddr %{param_value}"
+multiwall::nftables::rule::set_dscp: "dscp set %{param_value}"
+multiwall::nftables::rule::set_dscp_class: "dscp set %{param_value}"
+multiwall::nftables::rule::set_mark: "ct mark set %{param_value}"
+multiwall::nftables::rule::set_mss: 'flags syn tcp option maxseg size set %{param_value}'
+multiwall::nftables::rule::socket: "socket transparent %{param_value}"
+multiwall::nftables::rule::stat_mode_nth: 'numgen inc'
+multiwall::nftables::rule::stat_mode_random: 'meta random'
+multiwall::nftables::rule::stat_every: "mod %{param_value}"
+multiwall::nftables::rule::stat_packet: "%{param_value} counter"
+multiwall::nftables::rule::stat_probability: "& %{param_value} counter"
+multiwall::nftables::rule::tcp_flags: "tcp flags %{param_value} counter"
+# May require some further investigation for negations
+multiwall::nftables::rule::tcp_option: "tcp option %{param_value}"
+# Could, and maybe should, be joined into a single parameter, but for now, keeping them separate so they could be
+# overwritten if someone comes up with a different solution here.
+multiwall::nftables::rule::time_start: 'meta hour "%{param_value}"'
+multiwall::nftables::rule::time_stop: '-"%{param_value}"'
+multiwall::nftables::rule::week_days: "meta day %{param_value} counter"

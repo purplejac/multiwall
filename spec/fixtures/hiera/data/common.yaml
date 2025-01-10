@@ -1,1 +1,2 @@
-../../../../data/common.yaml
+---
+multiwall::target_firewall: 'nftables'

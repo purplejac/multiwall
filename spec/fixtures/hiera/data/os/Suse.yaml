@@ -1,0 +1,12 @@
+---
+multiwall::nftables::target_fw_features:
+  echo: '/usr/bin/echo'
+  nft_path: '/usr/sbin/nft'
+
+#
+# Defines for defined type testing
+#
+nftables::echo: '/usr/bin/echo'
+nftables::nft_path: '/usr/sbin/nft'
+
+multiwall::target_firewall: 'iptables'
