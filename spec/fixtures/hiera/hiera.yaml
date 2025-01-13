@@ -20,11 +20,13 @@ hierarchy:
     path: "testcases/${facts.testcase}.yaml"
   - name: "osfamily"
     paths:
-      - "os/%{facts.os.name}.yaml"
       - "os/%{facts.os.family}.yaml"
+      - "os/%{facts.os.family/%{facts.os.name}.yaml"
+      - "os/%{facts.os.family}/%{facts.os.release.major}.yaml"
+      - "os/%{facts.os.family}/%{facts.os.name}-%{facts.os.release.major}.yaml"
   - name: 'Firewall Translations'
     paths:
-      - "firewalls/nftables.yaml"
+      - "firewalls/%{facts.multiwall_target}.yaml"
   - name: "Spec Hiera"
     path: "spec.yaml"
   - name: "common"

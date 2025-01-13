@@ -5,16 +5,22 @@ require 'spec_helper'
 describe 'multiwall::rule' do
   on_supported_os.each do |os, os_facts|
     context "on #{os}" do
-      let(:facts) { os_facts.merge({ multiwall: { 'blackhole_targets' => ['10.10.10.10', '20.20.20.20'] } }) }
       let(:os_check) do
-        if ((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
-           ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
-           ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
-           ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
-           (facts[:os]['name'] == 'Fedora')
+        if ((os_facts[:os]['family'] == 'RedHat') && (os_facts[:os]['release']['major'].to_i > 7)) ||
+           ((os_facts[:os]['name'] == 'Debian') && (os_facts[:os]['release']['major'].to_i > 10)) ||
+           ((os_facts[:os]['name'] == 'Ubuntu') && os_facts[:os]['release']['major'] > '20.00') ||
+           ((os_facts[:os]['name'] == 'SLES') && (os_facts[:os]['release']['major'].to_i > 15)) ||
+           (os_facts[:os]['name'] == 'Fedora')
           true
         else
           false
+        end
+      end
+      let(:facts) do
+        if os_check
+          os_facts.merge({ multiwall: { 'blackhole_targets' => ['10.10.10.10', '20.20.20.20'] }, multiwall_target: 'nftables' })
+        else
+          os_facts.merge({ multiwall: { 'blackhole_targets' => ['10.10.10.10', '20.20.20.20'] }, multiwall_target: 'iptables' })
         end
       end
 
@@ -378,7 +384,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('OUTPUT-date_start_setting_timestamp_to_enforce').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => 'ip daddr 0.0.0.0 ip protocol tcp dport 443 meta time >= 1672531200 meta time <= 1735689600 accept',
+              'content' => 'ip daddr 0.0.0.0 tcp dport 443 meta time >= 1672531200 meta time <= 1735689600 accept',
               'order' => '13',
             )
           else

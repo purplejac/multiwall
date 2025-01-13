@@ -8,6 +8,7 @@ describe 'multiwall' do
       let(:facts) { os_facts }
 
       it { is_expected.to compile }
+      it { is_expected.to contain_file('/etc/puppetlabs/facter/facts.d/multiwall_target.yaml') }
     end
   end
 end

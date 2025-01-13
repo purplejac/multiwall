@@ -1,4 +1,0 @@
----
-multiwall::target_firewall: 'iptables'
-multiwall::target_fw_features:
-  ensure: running

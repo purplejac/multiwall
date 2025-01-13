@@ -19,28 +19,35 @@ describe 'multiwall::nftables::rule' do
       }
     }
   end
-  let(:title) { params['name'] }
 
-  let(:os_check) do
-    if ((facts[:os]['family'] == 'RedHat') && (facts[:os]['release']['major'].to_i > 7)) ||
-       ((facts[:os]['name'] == 'Debian') && (facts[:os]['release']['major'].to_i > 10)) ||
-       ((facts[:os]['name'] == 'Ubuntu') && facts[:os]['release']['major'] > '20.00') ||
-       ((facts[:os]['name'] == 'SLES') && (facts[:os]['release']['major'].to_i > 15)) ||
-       (facts[:os]['name'] == 'Fedora')
-
-      true
-    else
-      false
-    end
-  end
 
   on_supported_os.each do |os, os_facts|
-    context "on #{os} basic rule" do
-      let(:facts) { os_facts }
+    let(:title) { params['name'] }
 
-      it { is_expected.to compile }
+    let(:os_check) do
+      if ((os_facts[:os]['family'] == 'RedHat') && (os_facts[:os]['release']['major'].to_i > 7)) ||
+         ((os_facts[:os]['name'] == 'Debian') && (os_facts[:os]['release']['major'].to_i > 10)) ||
+         ((os_facts[:os]['name'] == 'Ubuntu') && os_facts[:os]['release']['major'] > '20.00') ||
+         ((os_facts[:os]['name'] == 'SLES') && (os_facts[:os]['release']['major'].to_i > 15)) ||
+         (os_facts[:os]['name'] == 'Fedora')
+        true
+      else
+        false
+      end
+    end
+  
+    let(:facts) do
+      if os_check
+        os_facts.merge({ multiwall: { 'blackhole_targets' => ['10.10.10.10', '20.20.20.20'] }, multiwall_target: 'nftables' })
+      else
+          os_facts.merge({ multiwall: { 'blackhole_targets' => ['10.10.10.10', '20.20.20.20'] }, multiwall_target: 'iptables' })
+        end
+    end
+    
+    context "on #{os} basic rule" do
       it {
         if os_check
+          is_expected.to compile
           is_expected.to contain_multiwall__nftables__rule(params['name']).with('params' => params['params'])
           is_expected.to contain_nftables__rule('INPUT-reject_local_traffic_not_on_loopback_interface').with(
             'ensure' => params['params']['ensure'],
@@ -68,15 +75,15 @@ describe 'multiwall::nftables::rule' do
       end
       let(:facts) { os_facts }
 
-      it { is_expected.to compile }
       it {
         if os_check
+          is_expected.to compile
           is_expected.to contain_multiwall__nftables__rule(params['name'])
           is_expected.to contain_nftables__rule('OUTPUT-testing_dport_setting_with_some_basics').with(
             'name' => 'OUTPUT-testing_dport_setting_with_some_basics',
             'ensure' => 'present',
             'table' => 'inet-filter',
-            'content' => 'ip daddr 10.10.10.10 ip protocol tcp dport 8080 accept',
+            'content' => 'ip daddr 10.10.10.10 tcp dport 8080 accept',
           )
         end
       }

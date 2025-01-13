@@ -165,8 +165,8 @@ multiwall::nftables::rule::src_range: "%{protocol} saddr %{param_value}"
 multiwall::nftables::rule::source: "%{protocol} saddr %{param_value}"
 multiwall::nftables::rule::dst_range: "%{protocol} daddr %{param_value}"
 multiwall::nftables::rule::destination: "%{protocol} daddr %{param_value}"
-multiwall::nftables::rule::sport: "%{port_proto} dport %{param_value}"
-multiwall::nftables::rule::dport: "%{port_proto} sport %{param_value}"
+multiwall::nftables::rule::sport: "%{port_proto} sport %{param_value}"
+multiwall::nftables::rule::dport: "%{port_proto} dport %{param_value}"
 
 #
 # https://wiki.nftables.org/wiki-nftables/index.php/Mangling_packet_headers outlines this as the appropriate approach to
