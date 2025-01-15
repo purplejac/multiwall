@@ -22,11 +22,13 @@
 class multiwall (
   Enum['iptables', 'nftables']  $target_firewall = 'nftables',
   Boolean $manage_fact_dir = false,
+  Boolean $strict_defaults = false,
   Hash    $target_fw_features = {},
 ) {
   if $manage_fact_dir {
     file { ['/etc/puppetlabs/facter', '/etc/puppetlabs/facter/facts.d']:
       ensure => 'directory',
+      before => File['/etc/puppetlabs/facter/facts.d/multiwall_target.yaml'],
     }
   }
 
@@ -35,11 +37,22 @@ class multiwall (
     content => "multiwall_target: ${target_firewall}",
   }
 
-  if $target_fw_features == {} {
-    include "multiwall::${target_firewall}"
-  } else {
-    class { "multiwall::${target_firewall}":
-      target_fw_features => $target_fw_features,
+  if $strict_defaults {
+    $unset_defaults = {
+      out_ntp  => false,
+      out_http => false,
+      out_dns  => false,
+      out_https => false,
+      out_icmp => false,
+      in_ssh => false,
+      in_icmp => false,
     }
+    $module_features = $target_fw_features + $unset_defaults
+  } else {
+    $module_features = $target_fw_features
+  }
+
+  class { "multiwall::${target_firewall}":
+    target_fw_features => $module_features,
   }
 }

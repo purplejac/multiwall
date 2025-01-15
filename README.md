@@ -1,10 +1,11 @@
 # multiwall
 
-Welcome to your new module. A short overview of the generated parts can be found
-in the [PDK documentation][1].
+[![Puppet Forge](https://img.shields.io/puppetforge/v/purplejac/multiwall.svg)](https://forge.puppetlabs.com/purplejac/multiwall)
+[![Puppet Forge - downloads](https://img.shields.io/puppetforge/dt/purplejac/multiwall.svg)](https://forge.puppetlabs.com/purplejac/multiwall)
+[![puppetmodule.info docs](http://www.puppetmodule.info/images/badge.png)](http://www.puppetmodule.info/m/purplejac-sysctl)
+[![Apache-2.0 License](https://github.com/purplejac/multiwall/blob/main/LICENSE)](LICENSE)
 
-The README template below provides a starting point with details about what
-information to include in your README.
+Universal firewall abstraction module
 
 ## Table of Contents
 
@@ -19,41 +20,48 @@ information to include in your README.
 
 ## Description
 
-Briefly tell users why they might want to use your module. Explain what your
-module does and what kind of problems users can solve with it.
 
-This should be a fairly short description helps the user decide if your module
-is what they want.
+This module abstracts firewall resources based on the structure of resource 
+declarations applied on [puppetlabs/firewall](https://forge.puppet.com/modules/puppetlabs/firewall)
+
+The module is designed with modularisation and expandability in mind. The thought is to
+abstract firewall resources to create a simple, agnostic, drop-in-replace set of resource
+types to be used in replacing the firewall and firewallchain resources provided by 
+puppetlabs/firewall
+
+The longer-term view is to allow for the relatively simple expansion adding
+other firewall types to the module, mapping content and features independently
+with rules defined in module hiera.
+Initially, the nftables conversion relies on defined types based on the resources
+offered by the Vox Pupuli [nftables](https://forge.puppet.com/modules/puppet/nftables)
 
 ## Setup
 
-### What multiwall affects **OPTIONAL**
+### Setup Requirements
 
-If it's obvious what your module touches, you can skip this section. For
-example, folks can probably figure out that your mysql_instance module affects
-their MySQL instances.
-
-If there's more that they should know about, though, this is the place to
-mention:
-
-* Files, packages, services, or operations that the module will alter, impact,
-  or execute.
-* Dependencies that your module automatically installs.
-* Warnings or other important notices.
-
-### Setup Requirements **OPTIONAL**
-
-If your module requires anything extra before setting up (pluginsync enabled,
-another module, etc.), mention it here.
-
-If your most recent release breaks compatibility or requires particular steps
-for upgrading, you might want to include an additional "Upgrading" section here.
+Module dependencies currently exist for puppetlabs/firewall, puppet/nftables
+and their underlying dependencies.
+Any initial setup will require at least two Puppet runs for idempotency, as the first run
+sets up supported/expected firewall targets and the second applies proper rule enforcement.
 
 ### Beginning with multiwall
 
-The very basic steps needed for a user to get the module up and running. This
-can include setup steps, if necessary, or it can be an example of the most basic
-use of the module.
+Initial setup/configuation of multiwall itself can be done with a simple 'include' on the multiwall
+resource. The module will attempt to auto-resolve the underlying module choice, 
+based on the default firewall for the OS-family and version.
+
+```puppet
+include multiwall
+```
+
+Chains can then be defined using multiwall::chain resources:
+```puppet
+multiwall::chain { 'INPUT:filter:IPv4':
+  ensure => present,
+  policy => drop,
+  before => undef,
+}
+```
 
 ## Usage
 

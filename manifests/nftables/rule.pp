@@ -39,7 +39,7 @@
 #
 define multiwall::nftables::rule (
   Hash $params,
-  Array $param_list    = lookup("multiwall::nftables::rule::param_list"),
+  Array $param_list    = lookup("multiwall::nftables::rule::param_list", { "default_value" => [] }),
   Integer $high_offset = lookup("multiwall::nftables::rule::high_offset", { "default_value" => 20 }),
   Integer $low_offset  = lookup("multiwall::nftables::rule::low_offset", { "default_value" => 10 }),
   Integer $mid_val     = lookup("multiwall::nftables::rule::mid_val", { "default_value" => 50 }),

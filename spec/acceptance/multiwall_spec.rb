@@ -3,19 +3,38 @@
 require 'spec_helper_acceptance'
 
 describe 'Multiwall setup' do
-  context 'standard usage' do
+  context 'Basic module install' do
     pp = <<-PUPPETCODE
-        include multiwall
+        class { 'multiwall':
+          manage_fact_dir => true,
+        }
     PUPPETCODE
 
     it do
       idempotent_apply(pp)
     end
+
+    describe package('nftables') do
+      it { should be_installed }
+    end
+
+    describe file('/etc/puppetlabs/facter/facts.d') do
+      it { should be_directory }
+    end
+
+    describe file('/etc/puppetlabs/facter/facts.d/multiwall_target.yaml') do
+      it { should be_file }
+      its(:content) { should match /multiwall_target: nftables/ }
+    end
   end
 
   context 'Test adding firewall rules' do
     pp = <<-PUPPETCODE
-      include multiwall
+      class { 'multiwall':
+        manage_fact_dir => true,
+        strict_defaults => true,
+      }
+
       multiwall::chain { 'TEST:filter:IPv4':
         ensure => 'present',
       }
@@ -26,6 +45,12 @@ describe 'Multiwall setup' do
         ensure => 'present',
       }
 
+      multiwall::rule { '001 Add SSH in for testing': 
+          chain       => 'INPUT',
+          proto       => 'tcp',
+          dport       => '22',
+          jump        => 'accept',
+      }
       multiwall::rule { '002 Basic Rule Test':
           chain       => 'TEST',
           destination => '10.10.10.10/32',
@@ -110,8 +135,17 @@ describe 'Multiwall setup' do
     PUPPETCODE
 
     it do
+      apply_manifest(pp)
       idempotent_apply(pp)
       idempotent_apply(pp)
+    end
+
+    describe command('nft list chain inet filter default_out | sha256sum') do
+      its(:stdout) { should match /1c041ca04841c04204d9755f8eabb551c277a66d99720774ae1fb7b3b5588cb5/ }
+    end
+
+    describe command('nft list ruleset') do
+      its(:stdout) { should match /chain TEST/}
     end
   end
 end
