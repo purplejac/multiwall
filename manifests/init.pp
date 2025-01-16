@@ -12,6 +12,15 @@
 # The firewall to be targeted, to start with offering the
 # options of iptables and nftables 
 #
+# @param manage_fact_dir [Boolean]
+# Decides whether multiwall should manage the structure /etc/puppetlabs/facter(/facts.d)
+# in order to facilitate the deployment of the multiwall fact.
+#
+# @param strict_defaults [Boolean]
+# nftables auto-sets a range of default rule settings, such as ntp/http and DNS out.
+# with strict_defaults = false, these will all be set to false, for the module,
+# allowing the user to manage them directly themselves.
+#
 # @param target_fw_features [Hash]
 # A hash of any parameters that might be relevant for the underlying 
 # module. 

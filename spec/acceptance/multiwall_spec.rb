@@ -15,16 +15,16 @@ describe 'Multiwall setup' do
     end
 
     describe package('nftables') do
-      it { should be_installed }
+      it { is_expected.to be_installed }
     end
 
     describe file('/etc/puppetlabs/facter/facts.d') do
-      it { should be_directory }
+      it { is_expected.to be_directory }
     end
 
     describe file('/etc/puppetlabs/facter/facts.d/multiwall_target.yaml') do
-      it { should be_file }
-      its(:content) { should match /multiwall_target: nftables/ }
+      it { is_expected.to be_file }
+      its(:content) { is_expected.to match %r{multiwall_target: nftables} }
     end
   end
 
@@ -45,7 +45,7 @@ describe 'Multiwall setup' do
         ensure => 'present',
       }
 
-      multiwall::rule { '001 Add SSH in for testing': 
+      multiwall::rule { '001 Add SSH in for testing':
           chain       => 'INPUT',
           proto       => 'tcp',
           dport       => '22',
@@ -141,11 +141,11 @@ describe 'Multiwall setup' do
     end
 
     describe command('nft list chain inet filter default_out | sha256sum') do
-      its(:stdout) { should match /1c041ca04841c04204d9755f8eabb551c277a66d99720774ae1fb7b3b5588cb5/ }
+      its(:stdout) { is_expected.to match %r{1c041ca04841c04204d9755f8eabb551c277a66d99720774ae1fb7b3b5588cb5} }
     end
 
     describe command('nft list ruleset') do
-      its(:stdout) { should match /chain TEST/}
+      its(:stdout) { is_expected.to match %r{chain TEST} }
     end
   end
 end

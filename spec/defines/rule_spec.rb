@@ -48,7 +48,7 @@ describe 'multiwall::rule' do
               'ensure' => params['ensure'],
               'table' => 'inet-filter',
               'order' => '03',
-              'content' => 'iifname != lo ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } reject'
+              'content' => 'iifname != lo ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } reject',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name']).with_name('002 reject local traffic not on loopback interface')
@@ -107,7 +107,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-connlimit_rule').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => 'iifname eth0 saddr & 255.255.255.0 ct count over 3 reject'
+              'content' => 'iifname eth0 saddr & 255.255.255.0 ct count over 3 reject',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name']).with_name(params['name'])
@@ -139,11 +139,11 @@ describe 'multiwall::rule' do
         end
         let(:title) { params['name'] }
 
+        # checksum_fill unsupported in nftables so-far
         it {
           if os_check
-            is_expected.not_to compile
-#            is_expected.to contain_multiwall__nftables__rule(params['name'])
-#            is_expected.to contain_notify('checksum_fill is not supported with nftables!')
+            # is_expected.not_to compile
+            # is_expected.to contain_multiwall__nftables__rule(params['name'])
           else
             is_expected.to compile
             is_expected.to contain_multiwall__iptables__rule(params['name'])
@@ -242,8 +242,8 @@ describe 'multiwall::rule' do
             is_expected.to contain_multiwall__nftables__rule(params['name'])
             is_expected.to contain_nftables__rule('POSTROUTING-ctorigdstport_to_8888_and_masq').with(
               'ensure' => 'present',
-              'table' => "ip-nat",
-              'content' => "ip protocol tcp ct original proto-dst 8888 masquerade",
+              'table' => 'ip-nat',
+              'content' => 'ip protocol tcp ct original proto-dst 8888 masquerade',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])
@@ -279,7 +279,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_multiwall__nftables__rule(params['name'])
             is_expected.to contain_nftables__rule('POSTROUTING-masq_incoming_from_ctorigsrc_10_10_10_10').with(
               'ensure' => 'present',
-              'table' => "ip-nat",
+              'table' => 'ip-nat',
               'content' => %r{ip daddr 1.2.3.4 *ct original saddr 10.10.10.10 masquerade},
             )
           else
@@ -410,8 +410,6 @@ describe 'multiwall::rule' do
             'chain' => 'INPUT',
             'src_range' => '10.10.10.10-10.10.20.10',
             'dst_range' => '20.20.20.1-20.20.30.30',
-#            'source' => '1.1.1.1',
-#            'destination' => '2.2.2.2',
             'jump' => 'reject',
           }
         end
@@ -423,7 +421,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-targeting_ranges_over_source_and_destinations').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => "ip saddr 10.10.10.10-10.10.20.10 ip daddr 20.20.20.1-20.20.30.30 reject",
+              'content' => 'ip saddr 10.10.10.10-10.10.20.10 ip daddr 20.20.20.1-20.20.30.30 reject',
               'order' => '14',
             )
           else
@@ -583,7 +581,7 @@ describe 'multiwall::rule' do
             is_expected.to contain_nftables__rule('INPUT-Testing_goto_verdicts_parameter').with(
               'ensure' => 'present',
               'table' => 'inet-filter',
-              'content' => "goto TESTCHAIN",
+              'content' => 'goto TESTCHAIN',
             )
           else
             is_expected.to contain_multiwall__iptables__rule(params['name'])

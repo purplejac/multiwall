@@ -20,7 +20,6 @@ describe 'multiwall::nftables::rule' do
     }
   end
 
-
   on_supported_os.each do |os, os_facts|
     let(:title) { params['name'] }
 
@@ -35,15 +34,15 @@ describe 'multiwall::nftables::rule' do
         false
       end
     end
-  
+
     let(:facts) do
       if os_check
         os_facts.merge({ multiwall: { 'blackhole_targets' => ['10.10.10.10', '20.20.20.20'] }, multiwall_target: 'nftables' })
       else
-          os_facts.merge({ multiwall: { 'blackhole_targets' => ['10.10.10.10', '20.20.20.20'] }, multiwall_target: 'iptables' })
-        end
+        os_facts.merge({ multiwall: { 'blackhole_targets' => ['10.10.10.10', '20.20.20.20'] }, multiwall_target: 'iptables' })
+      end
     end
-    
+
     context "on #{os} basic rule" do
       it {
         if os_check
@@ -52,7 +51,7 @@ describe 'multiwall::nftables::rule' do
           is_expected.to contain_nftables__rule('INPUT-reject_local_traffic_not_on_loopback_interface').with(
             'ensure' => params['params']['ensure'],
             'table' => 'inet-filter',
-            'content' => 'iifname != lo ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } reject'
+            'content' => 'iifname != lo ip daddr 127.0.0.1/8 ip protocol { icmp, esp, ah, comp, udp, udplite, tcp, dccp, sctp } reject',
           )
         end
       }

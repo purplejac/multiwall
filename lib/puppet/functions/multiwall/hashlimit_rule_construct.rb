@@ -52,7 +52,8 @@ Puppet::Functions.create_function(:'multiwall::hashlimit_rule_construct') do
                 else
                   ''
                 end
-
+      # rubocop:disable Style/Next
+      # rubocop:disable Style/GuardClause
       if params[hashlimit_param]
         translated_limit = if params[hashlimit_param].match?('/')
                              "#{params[hashlimit_param]}/second"

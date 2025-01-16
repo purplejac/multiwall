@@ -1,4 +1,4 @@
-# lint:ignore:140chars
+# lint:ignore:140chars lint:ignore:double_quoted_strings lint:ignore:lookup_in_parameter
 # @summary A short summary of the purpose of this defined type.
 #
 # A description of what this defined type does
@@ -78,7 +78,7 @@ define multiwall::nftables::rule (
     $chain = 'INPUT'
   }
 
-  $protocol = $sanitised_params['protocol'] ? { default => 'ip', 'iptables6' => 'ip6', 'IPv6' => 'ip6'}
+  $protocol = $sanitised_params['protocol'] ? { default => 'ip', 'iptables6' => 'ip6', 'IPv6' => 'ip6' }
 
   $sanitised_name = ([$chain] + [(($name.split(/[ |-]/) - $num_string)).join('_')]).join('-').regsubst(/[\.|\/]/,'_', 'G')
   $family = $sanitised_params['family']
@@ -174,7 +174,6 @@ define multiwall::nftables::rule (
 
         if $body_set =~ /ip6{0,1}$/ and ($param_rule =~ /^(ip|fib|sk|goto)/ or $parameter =~ /^(ct|(out|in)iface)/) {
           $param_rule
-
         } else {
           "${body_set} ${param_rule}"
         }
