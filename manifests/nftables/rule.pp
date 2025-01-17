@@ -168,7 +168,11 @@ define multiwall::nftables::rule (
         $port_proto = $sanitised_params['proto']
         $param_rule = lookup("multiwall::nftables::rule::${parameter}")
 
-        "${body_set} ${param_rule}"
+        if $body_set =~ /ip6{0,1}$/ {
+          $param_rule
+        } else {
+          "${body_set} ${param_rule}"
+        }
       } else {
         $param_rule = lookup("multiwall::nftables::rule::${parameter}")
 

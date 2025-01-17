@@ -85,9 +85,9 @@ multiwall::nftables::rule::param_list:
   - mac_source
   - hop_limit
   - length
-  - proto
   - sport
   - dport
+  - proto
   - tcp_flags
   - set_dscp
   - set_dscp_class

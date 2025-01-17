@@ -20,6 +20,18 @@
 # Data type: Boolean
 # Deciding whether to use the shared inet table in nftables, over specifying the protocol-version (IPv4/IPv6)
 # 
+# @param type
+# Data type: Optional[Enum['filter', 'nat', 'route']] 
+# Type setting for nftables base chain. Will fail if hook and priority are not also set.
+#
+# @param hook Optional[Enum[input, forward, output, prerouting, postrouting]]
+# Kernel hook to connect the chain when creating an nftables base chain.
+# requires type and priority to be set, otherwise compilation will fail with an error.
+#
+# @oaram priority
+# Data type: Optional[Integer]
+# Chain/hook priority setting. Fails without hook and type set
+#
 # @param ignore
 # Data type: Optional[Variant[String[1], Array[String[1]]]]
 # Regex to perform on firewall rules to exempt unmanaged rules from purging.
@@ -30,19 +42,22 @@
 # Data type: Optional[Enum['accept', 'drop', 'queue', 'return']]
 # This action to take when the end of the chain is reached.
 # This can only be set on inbuilt chains (i.e. INPUT, FORWARD, OUTPUT, PREROUTING, POSTROUTING)
-# Not currently enforced for nftables...
+# nftables only allows enforcement on base chains, so will result in failure if type, hook and priority are not also set.
 #
 # A description of what this defined type does
 #
 # @example
 #   multiwall::nftables::chain { 'namevar': }
 define multiwall::nftables::chain (
-  Enum[present, absent, 'present', 'absent']          $ensure,
-  Boolean                                             $ignore_foreign = false,
-  Boolean                                             $purge          = false,
-  Boolean                                             $use_inet       = true,
-  Optional[Variant[String[1], Array[String[1]]]]      $ignore         = undef,
-  Optional[Enum['accept', 'drop', 'queue', 'return']] $policy         = undef,
+  Enum[present, absent, 'present', 'absent']                                $ensure,
+  Boolean                                                                   $ignore_foreign = false,
+  Boolean                                                                   $purge          = false,
+  Boolean                                                                   $use_inet       = true,
+  Optional[Enum['filter', 'nat', 'route']]                                  $type           = undef,
+  Optional[Enum['input', 'forward', 'output', 'prerouting', 'postrouting']] $hook           = undef,
+  Optional[Integer]                                                         $priority       = undef,
+  Optional[Variant[String[1], Array[String[1]]]]                            $ignore         = undef,
+  Optional[Enum['accept', 'drop', 'queue', 'return']]                       $policy         = undef,
 ) {
   $chain_config = $name.split(/:/)
 
@@ -70,6 +85,30 @@ define multiwall::nftables::chain (
   # Convert the table name to match the nftables::chain type
   #
   $table = "${protocol}-${chain_config[1]}"
+
+  if ($type or $priority or $policy) {
+    unless $hook {
+      fail('Cannot set type, priority or default-policy on non-base chains in nftables.')
+    } else {
+      unless $type and $priority and $policy {
+        fail('Cannot create a base chain without setting type, priority and policy.')
+      } else {
+        concat::fragment { "nftables-${table}-chain-${chain_config[0]}-settings":
+          target  => "nftables-${table}-chain-${chain_config[0]}",
+          order   => '01',
+          content => "type ${type} hook ${hook} priority ${String($priority)}",
+        }
+
+        if $policy {
+          concat::fragment { "nftables-${table}-chain-${chain_config[0]}-policy":
+            target  => "nftables-${table}-chain-${chain_config[0]}",
+            order   => '02',
+            content => "policy ${policy}",
+          }
+        }
+      }
+    }
+  }
 
   #
   # Realise the resource with the provided settings

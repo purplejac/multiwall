@@ -37,6 +37,10 @@ describe 'Multiwall setup' do
 
       multiwall::chain { 'TEST:filter:IPv4':
         ensure => 'present',
+          type => 'filter',
+          hook => 'input',
+          priority => 20,
+          policy => 'accept',
       }
       multiwall::chain { 'POSTROUTING:nat:IPv4':
          ensure => 'present',

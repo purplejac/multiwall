@@ -17,9 +17,24 @@
 # Whether or not to purge unmanaged rules in this chain
 # Not currently enforced for nftables...
 #
+# @param type
+# Data type: Optional[Enum['filter', 'nat', 'route']] 
+# Type setting for nftables base chain. Will fail if hook and priority are not also set.
+# non-iptables setting
+#
+# @param hook Optional[Enum[input, forward, output, prerouting, postrouting]]
+# Kernel hook to connect the chain when creating an nftables base chain.
+# requires type and priority to be set, otherwise compilation will fail with an error.
+#
+# @oaram priority
+# Data type: Optional[Integer]
+# Chain/hook priority setting. Fails without hook and type set
+# non-iptables setting
+#
 # @param target_firewall
 # Data type: String
 # Name of the targeted firewall to be used, if overwriting the default firewall choice
+# non-iptables setting
 #
 # @param ignore
 # Data type: Optional[Variant[String[1], Array[String[1]]]]
@@ -39,12 +54,15 @@
 #   multiwall::chain { 'namevar': }
 #
 define multiwall::chain (
-  Enum[present, absent, 'present', 'absent']          $ensure,
-  Boolean                                             $ignore_foreign  = false,
-  Boolean                                             $purge           = false,
-  Optional[String]                                    $target_firewall = undef,
-  Optional[Variant[String[1], Array[String[1]]]]      $ignore          = undef,
-  Optional[Enum['accept', 'drop', 'queue', 'return']] $policy          = undef,
+  Enum[present, absent, 'present', 'absent']                                $ensure,
+  Boolean                                                                   $ignore_foreign  = false,
+  Boolean                                                                   $purge           = false,
+  Optional[Enum['filter', 'nat', 'route']]                                  $type           = undef,
+  Optional[Enum['input', 'forward', 'output', 'prerouting', 'postrouting']] $hook           = undef,
+  Optional[Integer]                                                         $priority       = undef,
+  Optional[String]                                                          $target_firewall = undef,
+  Optional[Variant[String[1], Array[String[1]]]]                            $ignore          = undef,
+  Optional[Enum['accept', 'drop', 'queue', 'return']]                       $policy          = undef,
 ) {
   #
   # Check if the firewall setting has been overwritten and enforce, if-so, otherwise
@@ -85,14 +103,29 @@ define multiwall::chain (
 # Construct the standardised hash for the chain declaration to be realised, using the appropriate chain type
 # as defined witgh the firwall variable
 #
-  $fw_chain = {
-    $name => {
-      ensure         => $ensure,
-      ignore_foreign => $ignore_foreign,
-      purge          => $purge,
-      ignore         => $ignore,
-      policy         => $policy,
-    },
+  if $firewall == 'iptables' {
+    $fw_chain = {
+      $name => {
+        ensure         => $ensure,
+        ignore_foreign => $ignore_foreign,
+        purge          => $purge,
+        ignore         => $ignore,
+        policy         => $policy,
+      },
+    }
+  } else {
+    $fw_chain = {
+      $name => {
+        ensure         => $ensure,
+        ignore_foreign => $ignore_foreign,
+        purge          => $purge,
+        ignore         => $ignore,
+        policy         => $policy,
+        type           => $type,
+        hook           => $hook,
+        priority       => $priority,
+      },
+    }
   }
 
   create_resources("multiwall::${firewall}::chain", $fw_chain)
